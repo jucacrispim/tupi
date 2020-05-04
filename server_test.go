@@ -28,7 +28,10 @@ import (
 
 func TestMain(m *testing.M) {
 	log.SetOutput(ioutil.Discard)
-	os.Exit(m.Run())
+	os.Chmod("./testdata/impossible.txt", 0000)
+	status := m.Run()
+	os.Chmod("./testdata/impossible.txt", 0644)
+	os.Exit(status)
 }
 
 func TestShowFile(t *testing.T) {
