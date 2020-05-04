@@ -9,14 +9,14 @@ installed clone the code:
 
 .. code-block:: sh
 
-   $ git clone https://github.com/jucacrispim/gimme
+   $ git clone https://github.com/jucacrispim/tupi
 
 
 And install the program with:
 
 .. code-block:: sh
 
-   $ cd gimme
+   $ cd tupi
    $ make install
 
 
@@ -25,15 +25,15 @@ And install the program with:
    For all make targets use ``make help``
 
 
-And now you can start the server using the command ``gimme``
+And now you can start the server using the command ``tupi``
 
 .. code-block:: sh
 
-   $ gimme
+   $ tupi
 
 
-Use the options ``-h`` to full information
+Use the option ``-h`` to full information
 
 .. code-block:: sh
 
-   $ gimme -h
+   $ tupi -h

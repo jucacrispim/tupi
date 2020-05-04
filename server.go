@@ -1,19 +1,19 @@
 // Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
 
-// This file is part of toxicbuild.
+// This file is part of tupi.
 
-// toxicbuild is free software: you can redistribute it and/or modify
+// tupi is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// toxicbuild is distributed in the hope that it will be useful,
+// tupi is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Affero General Public License for more details.
 
 // You should have received a copy of the GNU Affero General Public License
-// along with toxicbuild. If not, see <http://www.gnu.org/licenses/>.
+// along with tupi. If not, see <http://www.gnu.org/licenses/>.
 
 package main
 
@@ -70,7 +70,7 @@ func logRequest(h http.Handler) http.Handler {
 	return http.HandlerFunc(handler)
 }
 
-// SetupServer creates a new instance of the gimme
+// SetupServer creates a new instance of the tupi
 // http server. You can start it using `ListenAndServe`
 func SetupServer(rdir string) http.Handler {
 	setRootDir(rdir)

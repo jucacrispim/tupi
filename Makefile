@@ -2,7 +2,7 @@ GOCMD=go
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
-BIN_NAME=gimme
+BIN_NAME=tupi
 BUILD_DIR=build
 BIN_PATH=./$(BUILD_DIR)/$(BIN_NAME)
 OUTFLAG=-o $(BIN_PATH)
@@ -33,7 +33,7 @@ install:
 
 .PHONY: uninstall # - Remove the binary from path
 uninstall:
-	go clean -i github.com/jucacrispim/gimme
+	go clean -i github.com/jucacrispim/tupi
 
 
 .PHONY: help  # - Show help text

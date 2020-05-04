@@ -1,3 +1,3 @@
-module github.com/jucacrispim/gimme
+module github.com/jucacrispim/tupi
 
 go 1.14
