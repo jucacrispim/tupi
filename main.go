@@ -1,4 +1,4 @@
-// Copyright 2015-2019 Juca Crispim <juca@poraodojuca.net>
+// Copyright 2020 Juca Crispim <juca@poraodojuca.net>
 
 // This file is part of tupi.
 

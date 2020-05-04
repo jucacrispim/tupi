@@ -1,10 +1,10 @@
-Gimme - A simple http server
+Tupi - A simple http server
 ============================
 
 Build & install
 ---------------
 
-Gimme is written in go so you need the go compiler installed. With it
+Tupi is written in go so you need the go compiler installed. With it
 installed clone the code:
 
 .. code-block:: sh

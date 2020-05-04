@@ -28,6 +28,7 @@ clean:
 
 .PHONY: install # - Copy the binary to the path
 install:
+	$(GOBUILD) $(OUTFLAG)
 	cp $(BIN_PATH) .
 	go install
 
