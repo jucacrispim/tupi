@@ -42,14 +42,21 @@ func setRootDir(rdir string) {
 // request's path. The path is relative to the root dir of
 // the application. Returns the http status for the request
 func showFile(w http.ResponseWriter, req *http.Request) {
+	method := req.Method
+	if method != "GET" {
+		status := http.StatusMethodNotAllowed
+		http.Error(w, "Method not allowed", status)
+		return
+	}
+
 	path := rootDir + req.URL.Path
 	if !FileExists(path) {
 		status := http.StatusNotFound
 		http.Error(w, "File not found", status)
 		return
 	}
-	f, err := GetFile(path)
 
+	f, err := GetFile(path)
 	if err != nil {
 		status := http.StatusInternalServerError
 		http.Error(w, err.Error(), status)
@@ -65,7 +72,8 @@ func logRequest(h http.Handler) http.Handler {
 		sw := &statusedResponseWriter{w, http.StatusOK}
 		h.ServeHTTP(sw, req)
 		path := req.URL.Path
-		log.Printf("%s %d\n", path, sw.status)
+		method := req.Method
+		log.Printf("%s %s %d\n", method, path, sw.status)
 	}
 	return http.HandlerFunc(handler)
 }

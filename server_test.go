@@ -37,15 +37,17 @@ func TestMain(m *testing.M) {
 func TestShowFile(t *testing.T) {
 	var tests = []struct {
 		path   string
+		method string
 		status int
 	}{
-		{"/testdata/badfile.txt", 404},
-		{"/testdata/impossible.txt", 500},
-		{"/testdata/file.txt", 200},
+		{"/testdata/badfile.txt", "GET", 404},
+		{"/testdata/impossible.txt", "GET", 500},
+		{"/testdata/file.txt", "GET", 200},
+		{"/testdata/file.txt", "POST", 405},
 	}
 	handler := SetupServer(".")
 	for _, test := range tests {
-		req, _ := http.NewRequest("GET", test.path, nil)
+		req, _ := http.NewRequest(test.method, test.path, nil)
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)
 		status := w.Code
