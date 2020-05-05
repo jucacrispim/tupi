@@ -19,7 +19,7 @@ test:
 
 .PHONY: run # - Run the program. You can use `make run ARGS="-host :9090 -root=/"`
 run:
-	$(GOBUILD)
+	$(GOBUILD) $(OUTFLAG)
 	$(BIN_PATH) $(ARGS)
 
 .PHONY: clean # - Remove the files created during build
