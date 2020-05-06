@@ -1,0 +1,10 @@
+language: go
+versions:
+  - '1.14'
+
+steps:
+  - name: Build
+    command: make build
+
+  - name: Test
+    command: make test
