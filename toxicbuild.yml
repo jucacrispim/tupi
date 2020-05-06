@@ -2,6 +2,9 @@ language: go
 versions:
   - '1.14'
 
+system_packages:
+  - make
+
 steps:
   - name: Build
     command: make build
