@@ -40,16 +40,17 @@ func TestShowFile(t *testing.T) {
 		method string
 		status int
 	}{
-		{"/testdata/badfile.txt", "GET", 404},
-		{"/testdata/impossible.txt", "GET", 403},
-		{"/testdata/file.txt", "GET", 200},
-		{"/testdata/file.txt", "POST", 405},
+		{"/badfile.txt", "GET", 404},
+		{"/impossible.txt", "GET", 403},
+		{"/file.txt", "GET", 200},
+		{"/file.txt", "POST", 405},
+		{"/../server.go", "GET", 400},
 	}
-	handler := SetupServer(".")
+	server := SetupServer(":8000", "./testdata", 300)
 	for _, test := range tests {
 		req, _ := http.NewRequest(test.method, test.path, nil)
 		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, req)
+		server.Handler.ServeHTTP(w, req)
 		status := w.Code
 		if status != test.status {
 			t.Errorf("got %d, expected %d", status, test.status)

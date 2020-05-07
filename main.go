@@ -19,13 +19,13 @@ package main
 
 import (
 	"flag"
-	"net/http"
 )
 
 func main() {
-	host := flag.String("host", ":8080", "host:port to listen.")
+	host := flag.String("host", "0.0.0.0:8080", "host:port to listen.")
 	rdir := flag.String("root", ".", "The directory to serve files from")
+	timeout := flag.Int("timeout", 240, "Timeout in seconds for read/write")
 	flag.Parse()
-	handler := SetupServer(*rdir)
-	http.ListenAndServe(*host, handler)
+	server := SetupServer(*host, *rdir, *timeout)
+	server.ListenAndServe()
 }

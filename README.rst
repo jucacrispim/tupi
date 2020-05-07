@@ -1,11 +1,14 @@
 Tupi - A simple http server
 ============================
 
+Tupi is a very simple http server. Its main purpose is to provide an easy
+way to serve files from a directory.
+
 Build & install
 ---------------
 
-Tupi is written in go so you need the go compiler installed. With it
-installed clone the code:
+Tupi is written in go so you need the go compiler installed & runtime. With
+those installed clone the code:
 
 .. code-block:: sh
 
@@ -31,8 +34,10 @@ And now you can start the server using the command ``tupi``
 
    $ tupi
 
+This is going to serve the files in the default directory in the port
+8080
 
-Use the option ``-h`` to full information
+Use the option ``-h`` for full information
 
 .. code-block:: sh
 

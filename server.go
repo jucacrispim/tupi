@@ -20,6 +20,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 )
 
 var rootDir string = "."
@@ -38,9 +39,9 @@ func setRootDir(rdir string) {
 	rootDir = rdir
 }
 
-// ShowFile prints the contents of a file based in the
+// ShowFile writes the contents of a file based on the
 // request's path. The path is relative to the root dir of
-// the application. Returns the http status for the request
+// the application. Only GET requests are allowed.
 func showFile(w http.ResponseWriter, req *http.Request) {
 	method := req.Method
 	if method != "GET" {
@@ -57,18 +58,39 @@ func logRequest(h http.Handler) http.Handler {
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		sw := &statusedResponseWriter{w, http.StatusOK}
 		h.ServeHTTP(sw, req)
+		remote := getIp(req)
 		path := req.URL.Path
 		method := req.Method
-		log.Printf("%s %s %d\n", method, path, sw.status)
+		ua := req.Header.Get("User-Agent")
+		log.Printf("%s %s %s %d %s\n", remote, method, path, sw.status, ua)
 	}
 	return http.HandlerFunc(handler)
 }
 
+func getIp(req *http.Request) string {
+	ip := req.Header.Get("X-Real-Ip")
+	if ip == "" {
+		ip = req.Header.Get("X-Forwarded-For")
+	}
+	if ip == "" {
+		ip = req.RemoteAddr
+	}
+	return ip
+}
+
 // SetupServer creates a new instance of the tupi
 // http server. You can start it using `ListenAndServe`
-func SetupServer(rdir string) http.Handler {
+func SetupServer(addr string, rdir string, timeout int) *http.Server {
+	// read this for new implementation
+	// https://github.com/golang/go/issues/35626
 	setRootDir(rdir)
 	handler := logRequest(http.HandlerFunc(showFile))
-	http.Handle("/", handler)
-	return handler
+	server := &http.Server{
+		Addr:         addr,
+		Handler:      handler,
+		ReadTimeout:  time.Duration(timeout) * time.Second,
+		WriteTimeout: time.Duration(timeout) * time.Second,
+	}
+
+	return server
 }
