@@ -50,21 +50,7 @@ func showFile(w http.ResponseWriter, req *http.Request) {
 	}
 
 	path := rootDir + req.URL.Path
-	if !FileExists(path) {
-		status := http.StatusNotFound
-		http.Error(w, "File not found", status)
-		return
-	}
-
-	f, err := GetFile(path)
-	if err != nil {
-		status := http.StatusInternalServerError
-		http.Error(w, err.Error(), status)
-		return
-	}
-	status := http.StatusOK
-	w.WriteHeader(status)
-	w.Write(f.Content)
+	http.ServeFile(w, req, path)
 }
 
 func logRequest(h http.Handler) http.Handler {

@@ -41,7 +41,7 @@ func TestShowFile(t *testing.T) {
 		status int
 	}{
 		{"/testdata/badfile.txt", "GET", 404},
-		{"/testdata/impossible.txt", "GET", 500},
+		{"/testdata/impossible.txt", "GET", 403},
 		{"/testdata/file.txt", "GET", 200},
 		{"/testdata/file.txt", "POST", 405},
 	}
