@@ -57,3 +57,25 @@ func TestShowFile(t *testing.T) {
 		}
 	}
 }
+
+func TestGetIp(t *testing.T) {
+
+	var tests = []struct {
+		header string
+		value  string
+	}{
+		{"X-Real-Ip", "1.2.3.4"},
+		{"X-Forwarded-For", "1.2.3.5"},
+		// ths will return the value of req.Remoteaddr
+		{"Does-Not-Matter", "1.2.3.6"},
+	}
+	for _, test := range tests {
+		req, _ := http.NewRequest("GET", "/", nil)
+		req.Header.Set(test.header, test.value)
+		req.RemoteAddr = "1.2.3.6"
+		ip := getIp(req)
+		if ip != test.value {
+			t.Errorf("got %s, expected %s", ip, test.value)
+		}
+	}
+}
