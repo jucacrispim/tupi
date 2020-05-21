@@ -18,7 +18,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -84,7 +83,6 @@ func recieveFile(w http.ResponseWriter, req *http.Request) {
 	req.Body = http.MaxBytesReader(w, req.Body, maxUpload)
 	reader, err := req.MultipartReader()
 	if err != nil {
-		fmt.Println(err)
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
