@@ -18,12 +18,20 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
+var UPLOADCONTENTTYPE string = "multipart/form-data"
+
 var rootDir string = "."
+var uploadPath string = "/u/"
+var maxUpload int64 = 10 << 20
+var maxFileMemory int64 = 10 << 20
 
 type statusedResponseWriter struct {
 	http.ResponseWriter
@@ -39,14 +47,59 @@ func setRootDir(rdir string) {
 	rootDir = rdir
 }
 
-// ShowFile writes the contents of a file based on the
-// request's path. The path is relative to the root dir of
-// the application. Only GET requests are allowed.
+func setUploadPath(upath string) {
+	uploadPath = upath
+}
+
+func setMaxUpload(mupload int64) {
+	maxUpload = mupload
+}
+
+func setMaxFileMemory(mfmemory int64) {
+	maxFileMemory = mfmemory
+}
+
+// route is responsible for calling the proper handler based in the
+// request path.
+func route(w http.ResponseWriter, req *http.Request) {
+	if req.URL.Path == uploadPath {
+		recieveFile(w, req)
+	} else {
+		showFile(w, req)
+	}
+}
+
+func recieveFile(w http.ResponseWriter, req *http.Request) {
+	if req.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if !strings.HasPrefix(req.Header.Get("Content-Type"), UPLOADCONTENTTYPE) {
+		msg := "Bad request. Use Content-Type: " + UPLOADCONTENTTYPE
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+
+	req.Body = http.MaxBytesReader(w, req.Body, maxUpload)
+	reader, err := req.MultipartReader()
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	fname, err := writeFile(rootDir, reader)
+	if err != nil && err != io.EOF {
+		panic(err)
+	}
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte(fname + "\n"))
+}
+
 func showFile(w http.ResponseWriter, req *http.Request) {
-	method := req.Method
-	if method != "GET" {
-		status := http.StatusMethodNotAllowed
-		http.Error(w, "Method not allowed", status)
+	if req.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -84,13 +137,12 @@ func SetupServer(addr string, rdir string, timeout int) *http.Server {
 	// read this for new implementation
 	// https://github.com/golang/go/issues/35626
 	setRootDir(rdir)
-	handler := logRequest(http.HandlerFunc(showFile))
+	handler := logRequest(http.HandlerFunc(route))
 	server := &http.Server{
 		Addr:         addr,
 		Handler:      handler,
 		ReadTimeout:  time.Duration(timeout) * time.Second,
 		WriteTimeout: time.Duration(timeout) * time.Second,
 	}
-
 	return server
 }

@@ -18,8 +18,10 @@
 package main
 
 import (
+	"io"
 	"io/ioutil"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -76,6 +78,45 @@ func TestGetIp(t *testing.T) {
 		ip := getIp(req)
 		if ip != test.value {
 			t.Errorf("got %s, expected %s", ip, test.value)
+		}
+	}
+}
+
+func TestUploadFile(t *testing.T) {
+
+	var tests = []struct {
+		method string
+		ctype  string
+		status int
+	}{
+		{"PUT", UPLOADCONTENTTYPE, 405},
+		{"POST", "application/json", 400},
+		{"POST", UPLOADCONTENTTYPE, 201},
+	}
+
+	// https://stackoverflow.com/questions/43904974/
+	pr, pw := io.Pipe()
+	writer := multipart.NewWriter(pw)
+
+	server := SetupServer(":8000", "/tmp", 300)
+	for _, test := range tests {
+
+		go func() {
+			defer writer.Close()
+			_, err := writer.CreateFormFile("file", "file.txt")
+			if err != nil {
+				t.Error(err)
+			}
+		}()
+
+		req, _ := http.NewRequest(test.method, "/u/", pr)
+		req.Header.Set("Content-Type", test.ctype+"; boundary="+writer.Boundary())
+		w := httptest.NewRecorder()
+		server.Handler.ServeHTTP(w, req)
+		status := w.Code
+		if status != test.status {
+			t.Errorf("got %d, expected %d", status, test.status)
+			continue
 		}
 	}
 }

@@ -37,7 +37,7 @@ uninstall:
 	go clean -i github.com/jucacrispim/tupi
 
 
-.PHONY: help  # - Show help text
+.PHONY: help  # - Show this help text
 help:
 	@grep '^.PHONY: .* #' Makefile | sed 's/\.PHONY: \(.*\) # \(.*\)/\1 \2/' | expand -t20
 
