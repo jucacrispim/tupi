@@ -116,7 +116,6 @@ func TestUploadFile(t *testing.T) {
 		status := w.Code
 		if status != test.status {
 			t.Errorf("got %d, expected %d", status, test.status)
-			continue
 		}
 	}
 }
