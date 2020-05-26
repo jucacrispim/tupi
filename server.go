@@ -55,10 +55,6 @@ func setMaxUpload(mupload int64) {
 	maxUpload = mupload
 }
 
-func setMaxFileMemory(mfmemory int64) {
-	maxFileMemory = mfmemory
-}
-
 func setHtpasswordFile(fpath string) {
 	htpasswdFile = fpath
 }
@@ -140,13 +136,24 @@ func getIp(req *http.Request) string {
 }
 
 // SetupServer creates a new instance of the tupi
-// http server. You can start it using `ListenAndServe`
+// http server. You can start it using `ListenAndServe` or
+// `ListenAndServeTLS` to use https
 func SetupServer(
-	addr string, rdir string, timeout int, htpasswd string) *http.Server {
+	addr string,
+	rdir string,
+	timeout int,
+	htpasswd string,
+	upath string,
+	maxUpload int64) *http.Server {
+
 	// read this for new implementation
 	// https://github.com/golang/go/issues/35626
+
 	setRootDir(rdir)
 	setHtpasswordFile(htpasswd)
+	setUploadPath(upath)
+	setMaxUpload(maxUpload)
+
 	handler := logRequest(http.HandlerFunc(route))
 	server := &http.Server{
 		Addr:         addr,

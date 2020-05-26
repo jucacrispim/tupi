@@ -21,6 +21,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 )
 
 func main() {
@@ -31,7 +33,26 @@ func main() {
 		"htpasswd",
 		"",
 		"Full path for a htpasswd file used for authentication")
+	upath := flag.String("upath", "/u/", "Path to upload files")
+	maxUpload := flag.Int64("maxupload", 10<<20, "Max size for uploaded files")
+	certfile := flag.String("certfile", "", "Path for the tls certificate file")
+	keyfile := flag.String("keyfile", "", "Path for the tls key file")
+
 	flag.Parse()
-	server := SetupServer(*host, *rdir, *timeout, *htpasswdFile)
-	server.ListenAndServe()
+
+	server := SetupServer(*host, *rdir, *timeout, *htpasswdFile, *upath,
+		*maxUpload)
+
+	has_cert := *certfile != ""
+	has_key := *keyfile != ""
+
+	if (has_cert || has_key) && !(has_cert && has_key) {
+		fmt.Println("To use HTTPS you must pass certfile and keyfile")
+		os.Exit(1)
+	}
+	if has_cert && has_key {
+		server.ListenAndServeTLS(*certfile, *keyfile)
+	} else {
+		server.ListenAndServe()
+	}
 }

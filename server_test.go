@@ -48,7 +48,7 @@ func TestShowFile(t *testing.T) {
 		{"/file.txt", "POST", 405},
 		{"/../server.go", "GET", 400},
 	}
-	server := SetupServer(":8000", "./testdata", 300, "")
+	server := SetupServer(":8000", "./testdata", 300, "", "/u/", 10<<20)
 	for _, test := range tests {
 		req, _ := http.NewRequest(test.method, test.path, nil)
 		w := httptest.NewRecorder()
@@ -101,7 +101,7 @@ func TestRecieveFile(t *testing.T) {
 	pr, pw := io.Pipe()
 	writer := multipart.NewWriter(pw)
 
-	server := SetupServer(":8000", "/tmp", 300, fpath)
+	server := SetupServer(":8000", "/tmp", 300, fpath, "/u/", 10<<20)
 	for _, test := range tests {
 		go func() {
 			defer writer.Close()

@@ -24,7 +24,7 @@ import (
 	"os"
 )
 
-var chunkSize int64 = 5 << 20
+var chunkSize int64 = maxFileMemory
 
 // writeFile writes do contents of an uploaded file into a file in the
 // local fs.
