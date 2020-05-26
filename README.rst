@@ -2,7 +2,7 @@ Tupi - A simple http server
 ============================
 
 Tupi is a very simple http server. Its main purpose is to provide an easy
-way to serve files from a directory.
+way to serve files from, and upload file to, a directory.
 
 Build & install
 ---------------
@@ -42,3 +42,27 @@ Use the option ``-h`` for full information
 .. code-block:: sh
 
    $ tupi -h
+
+
+Uploading files
+---------------
+
+To upload files is required an authenticated request using basic http auth.
+Tupi reads the user auth information from a htpasswd file. To create a
+htpasswd file use:
+
+.. code-block:: sh
+
+   $ htpasswd -c -B /my/htpasswd myusername
+
+And start tupi with the ``-htpasswd`` flag:
+
+.. code-block:: sh
+
+   $ tupi -htpasswd /my/htpasswd
+
+
+.. warning::
+
+   Your htpasswd file must not be within the root directory being served
+   by tupi
