@@ -48,7 +48,7 @@ func TestShowFile(t *testing.T) {
 		{"/file.txt", "POST", 405},
 		{"/../server.go", "GET", 400},
 	}
-	server := SetupServer(":8000", "./testdata", 300)
+	server := SetupServer(":8000", "./testdata", 300, "")
 	for _, test := range tests {
 		req, _ := http.NewRequest(test.method, test.path, nil)
 		w := httptest.NewRecorder()
@@ -82,25 +82,27 @@ func TestGetIp(t *testing.T) {
 	}
 }
 
-func TestUploadFile(t *testing.T) {
-
+func TestRecieveFile(t *testing.T) {
+	fpath := "./testdata/htpasswd"
 	var tests = []struct {
 		method string
 		ctype  string
 		status int
+		user   string
+		passwd string
 	}{
-		{"PUT", UPLOADCONTENTTYPE, 405},
-		{"POST", "application/json", 400},
-		{"POST", UPLOADCONTENTTYPE, 201},
+		{"PUT", UPLOADCONTENTTYPE, 405, "test", "123"},
+		{"POST", "application/json", 400, "test", "123"},
+		{"POST", UPLOADCONTENTTYPE, 401, "test", "456"},
+		{"POST", UPLOADCONTENTTYPE, 201, "test", "123"},
 	}
 
 	// https://stackoverflow.com/questions/43904974/
 	pr, pw := io.Pipe()
 	writer := multipart.NewWriter(pw)
 
-	server := SetupServer(":8000", "/tmp", 300)
+	server := SetupServer(":8000", "/tmp", 300, fpath)
 	for _, test := range tests {
-
 		go func() {
 			defer writer.Close()
 			_, err := writer.CreateFormFile("file", "file.txt")
@@ -110,6 +112,7 @@ func TestUploadFile(t *testing.T) {
 		}()
 
 		req, _ := http.NewRequest(test.method, "/u/", pr)
+		req.SetBasicAuth(test.user, test.passwd)
 		req.Header.Set("Content-Type", test.ctype+"; boundary="+writer.Boundary())
 		w := httptest.NewRecorder()
 		server.Handler.ServeHTTP(w, req)

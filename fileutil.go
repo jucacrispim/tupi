@@ -38,6 +38,7 @@ func writeFile(dir string, r *multipart.Reader) (string, error) {
 	fpath := dir + string(os.PathSeparator) + fname
 	AcquireLock(fpath)
 	defer RelaseLock(fpath)
+
 	f, err := os.Create(fpath)
 	if err != nil {
 		return "", err

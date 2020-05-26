@@ -27,7 +27,11 @@ func main() {
 	host := flag.String("host", "0.0.0.0:8080", "host:port to listen.")
 	rdir := flag.String("root", ".", "The directory to serve files from")
 	timeout := flag.Int("timeout", 240, "Timeout in seconds for read/write")
+	htpasswdFile := flag.String(
+		"htpasswd",
+		"",
+		"Full path for a htpasswd file used for authentication")
 	flag.Parse()
-	server := SetupServer(*host, *rdir, *timeout)
+	server := SetupServer(*host, *rdir, *timeout, *htpasswdFile)
 	server.ListenAndServe()
 }

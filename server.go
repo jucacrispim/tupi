@@ -31,6 +31,7 @@ var rootDir string = "."
 var uploadPath string = "/u/"
 var maxUpload int64 = 10 << 20
 var maxFileMemory int64 = 10 << 20
+var htpasswdFile string = ""
 
 type statusedResponseWriter struct {
 	http.ResponseWriter
@@ -58,6 +59,10 @@ func setMaxFileMemory(mfmemory int64) {
 	maxFileMemory = mfmemory
 }
 
+func setHtpasswordFile(fpath string) {
+	htpasswdFile = fpath
+}
+
 // route is responsible for calling the proper handler based in the
 // request path.
 func route(w http.ResponseWriter, req *http.Request) {
@@ -69,6 +74,11 @@ func route(w http.ResponseWriter, req *http.Request) {
 }
 
 func recieveFile(w http.ResponseWriter, req *http.Request) {
+	ok := authenticate(req, htpasswdFile)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 	if req.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -131,10 +141,12 @@ func getIp(req *http.Request) string {
 
 // SetupServer creates a new instance of the tupi
 // http server. You can start it using `ListenAndServe`
-func SetupServer(addr string, rdir string, timeout int) *http.Server {
+func SetupServer(
+	addr string, rdir string, timeout int, htpasswd string) *http.Server {
 	// read this for new implementation
 	// https://github.com/golang/go/issues/35626
 	setRootDir(rdir)
+	setHtpasswordFile(htpasswd)
 	handler := logRequest(http.HandlerFunc(route))
 	server := &http.Server{
 		Addr:         addr,
