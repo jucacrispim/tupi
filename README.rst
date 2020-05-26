@@ -66,3 +66,14 @@ And start tupi with the ``-htpasswd`` flag:
 
    Your htpasswd file must not be within the root directory being served
    by tupi
+
+
+Using https
+-----------
+
+To use https you need to start tupi with ``-certfile`` and ``-keyfile``
+flags.
+
+.. code-block:: sh
+
+  $ tupi -certfile /my/file.pem -keyfile /my/file.key

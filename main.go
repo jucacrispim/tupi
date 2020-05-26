@@ -22,7 +22,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 )
 
 func main() {
@@ -47,12 +46,19 @@ func main() {
 	has_key := *keyfile != ""
 
 	if (has_cert || has_key) && !(has_cert && has_key) {
-		fmt.Println("To use HTTPS you must pass certfile and keyfile")
-		os.Exit(1)
+		panic("To use HTTPS you must pass certfile and keyfile")
 	}
+
+	fmt.Println("Tupi is serving at " + server.Addr)
+
+	var err error = nil
 	if has_cert && has_key {
 		server.ListenAndServeTLS(*certfile, *keyfile)
 	} else {
 		server.ListenAndServe()
+	}
+
+	if err != nil {
+		panic(err)
 	}
 }
