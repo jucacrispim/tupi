@@ -3,7 +3,7 @@ Tupi - A simple http server
 .. Fuck you github!!
 .. raw:: html
 
-    <img src=https://raw.githubusercontent.com/jucacrispim/tupi/master/logo.svg"" height="100px">
+    <img src="https://raw.githubusercontent.com/jucacrispim/tupi/master/logo.svg" height="100px">
 
 Tupi is a very simple http server. Its main purpose is to provide an easy
 way to serve files from, and upload file to, a directory.
