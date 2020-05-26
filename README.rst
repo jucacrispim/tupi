@@ -1,8 +1,10 @@
 Tupi - A simple http server
 ============================
+.. image:: logo.svg
 
 Tupi is a very simple http server. Its main purpose is to provide an easy
 way to serve files from, and upload file to, a directory.
+
 
 Build & install
 ---------------
