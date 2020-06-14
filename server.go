@@ -18,9 +18,14 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -29,6 +34,7 @@ var UPLOADCONTENTTYPE string = "multipart/form-data"
 
 var rootDir string = "."
 var uploadPath string = "/u/"
+var extractPath string = "/e/"
 var maxUpload int64 = 10 << 20
 var maxFileMemory int64 = 10 << 20
 var htpasswdFile string = ""
@@ -51,6 +57,10 @@ func setUploadPath(upath string) {
 	uploadPath = upath
 }
 
+func setExtractPath(epath string) {
+	extractPath = epath
+}
+
 func setMaxUpload(mupload int64) {
 	maxUpload = mupload
 }
@@ -64,41 +74,102 @@ func setHtpasswordFile(fpath string) {
 func route(w http.ResponseWriter, req *http.Request) {
 	if req.URL.Path == uploadPath {
 		recieveFile(w, req)
+	} else if req.URL.Path == extractPath {
+		recieveAndExtract(w, req)
 	} else {
 		showFile(w, req)
 	}
 }
 
-func recieveFile(w http.ResponseWriter, req *http.Request) {
+type requestError struct {
+	StatusCode int
+	Err        error
+}
+
+func (r *requestError) Error() string {
+	return fmt.Sprintf("%s", r.Err)
+}
+
+func checkUploadRequest(
+	w http.ResponseWriter, req *http.Request) (*multipart.Reader, error) {
+	err := &requestError{}
+
 	ok := authenticate(req, htpasswdFile)
 	if !ok {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
+		err.StatusCode = http.StatusUnauthorized
+		err.Err = errors.New("Unauthorized")
+		return nil, err
 	}
+
 	if req.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
+		err.StatusCode = http.StatusMethodNotAllowed
+		err.Err = errors.New("Method not allowed")
+		return nil, err
 	}
 
 	if !strings.HasPrefix(req.Header.Get("Content-Type"), UPLOADCONTENTTYPE) {
 		msg := "Bad request. Use Content-Type: " + UPLOADCONTENTTYPE
-		http.Error(w, msg, http.StatusBadRequest)
-		return
+		err.StatusCode = http.StatusBadRequest
+		err.Err = errors.New(msg)
+		return nil, err
 	}
 
 	req.Body = http.MaxBytesReader(w, req.Body, maxUpload)
-	reader, err := req.MultipartReader()
+	reader, mperr := req.MultipartReader()
+	if mperr != nil {
+		err.StatusCode = http.StatusBadRequest
+		err.Err = errors.New("Bad request")
+		return nil, err
+	}
+	return reader, nil
+}
+
+func recieveFile(w http.ResponseWriter, req *http.Request) {
+
+	reader, err := checkUploadRequest(w, req)
 	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
+		e, _ := err.(*requestError)
+		http.Error(w, string(err.Error()), e.StatusCode)
 		return
 	}
-
-	fname, err := writeFile(rootDir, reader)
+	fname, err := writeFile(rootDir, reader, false)
 	if err != nil && err != io.EOF {
 		panic(err)
 	}
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(fname + "\n"))
+}
+
+func recieveAndExtract(w http.ResponseWriter, req *http.Request) {
+	reader, err := checkUploadRequest(w, req)
+	if err != nil {
+		e, _ := err.(*requestError)
+		http.Error(w, string(err.Error()), e.StatusCode)
+		return
+	}
+
+	fname, err := writeFile(rootDir, reader, true)
+	if err != nil && err != io.EOF {
+		panic(err)
+	}
+	fpath := filepath.Join(rootDir, fname)
+
+	defer os.RemoveAll(fpath)
+	file, err := os.Open(fpath)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	files, err := extractFiles(file, rootDir)
+	if err != nil {
+		panic(err)
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	for _, f := range files {
+		w.Write([]byte(f + "\n"))
+	}
+
 }
 
 func showFile(w http.ResponseWriter, req *http.Request) {
@@ -144,6 +215,7 @@ func SetupServer(
 	timeout int,
 	htpasswd string,
 	upath string,
+	epath string,
 	maxUpload int64) *http.Server {
 
 	// read this for new implementation
@@ -152,6 +224,7 @@ func SetupServer(
 	setRootDir(rdir)
 	setHtpasswordFile(htpasswd)
 	setUploadPath(upath)
+	setExtractPath(epath)
 	setMaxUpload(maxUpload)
 
 	handler := logRequest(http.HandlerFunc(route))

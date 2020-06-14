@@ -17,21 +17,32 @@
 
 package main
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
-func TestLock(t *testing.T) {
-	AcquireLock("something")
-	if !IsLocked("something") {
-		t.Errorf("Lock didn't lock!")
+func TestExtractFiles(t *testing.T) {
+	f, _ := os.Open("./testdata/test.tar.gz")
+	root_dir := "/tmp/xx"
+	fl, err := extractFiles(f, root_dir)
+
+	if err != nil {
+		t.Errorf("error extracting files %s", err)
 	}
 
-	if IsLocked("otherthing") {
-		t.Errorf("Lock locked wrong thing!")
-	}
+	bad_links := make(map[string]bool, 0)
+	bad_links["bla/ble/bad.txt"] = true
 
-	ReleaseLock("something")
+	for _, fname := range fl {
+		path := filepath.Join(root_dir, fname)
+		_, err = os.Stat(path)
+		is_bad := bad_links[fname]
+		if err != nil && !is_bad {
+			t.Errorf("error extracting file %s: %s", path, err)
+		}
 
-	if IsLocked("something") {
-		t.Errorf("Lock was not released")
 	}
+	os.RemoveAll(root_dir)
 }

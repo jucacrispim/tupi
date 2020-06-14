@@ -62,7 +62,7 @@ func AcquireLock(key string) {
 }
 
 // ReleaseLock releases the lock for a given resource identified by a key.
-func RelaseLock(key string) {
+func ReleaseLock(key string) {
 	kmu.Unlock(key)
 }
 

@@ -33,6 +33,7 @@ func main() {
 		"",
 		"Full path for a htpasswd file used for authentication")
 	upath := flag.String("upath", "/u/", "Path to upload files")
+	epath := flag.String("epath", "/e/", "Path to extract files")
 	maxUpload := flag.Int64("maxupload", 10<<20, "Max size for uploaded files")
 	certfile := flag.String("certfile", "", "Path for the tls certificate file")
 	keyfile := flag.String("keyfile", "", "Path for the tls key file")
@@ -40,7 +41,7 @@ func main() {
 	flag.Parse()
 
 	server := SetupServer(*host, *rdir, *timeout, *htpasswdFile, *upath,
-		*maxUpload)
+		*epath, *maxUpload)
 
 	has_cert := *certfile != ""
 	has_key := *keyfile != ""
