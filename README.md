@@ -1,7 +1,7 @@
 Tupi http server
 ================
 
-![tupi](https://raw.githubusercontent.com/jucacrispim/tupi/master/logo.svg)
+![tupi](https://raw.githubusercontent.com/jucacrispim/tupi/master/logo.svg | height=100)
 
 Tupi is a very simple http server. Its main purpose is to provide an easy
 way to serve files from, and upload file to, a directory.
