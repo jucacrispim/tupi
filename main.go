@@ -37,6 +37,15 @@ func main() {
 	maxUpload := flag.Int64("maxupload", 10<<20, "Max size for uploaded files")
 	certfile := flag.String("certfile", "", "Path for the tls certificate file")
 	keyfile := flag.String("keyfile", "", "Path for the tls key file")
+	daemon := flag.Bool("daemon", false, "Runs the server in background")
+	logfile := flag.String(
+		"logfile",
+		"tupi.log",
+		"Log file used when running in backgroud")
+	pidfile := flag.String(
+		"pidfile",
+		"tupi.pid",
+		"Pid file for the background server")
 
 	flag.Parse()
 
@@ -52,6 +61,9 @@ func main() {
 
 	fmt.Println("Tupi is serving at " + server.Addr)
 
+	if *daemon {
+		daemonize(*logfile, *logfile, *pidfile)
+	}
 	var err error = nil
 	if has_cert && has_key {
 		server.ListenAndServeTLS(*certfile, *keyfile)
