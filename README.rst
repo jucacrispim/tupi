@@ -46,7 +46,7 @@ a directory with files
 
 
 Serving files
--------------
++++++++++++++
 
 You can start the server using the command ``tupi``
 
@@ -81,7 +81,7 @@ You can also list the contents of a directory:
 
 
 Uploading files
----------------
++++++++++++++++
 
 To upload files is required an authenticated request using basic http auth.
 Tupi reads the user auth information from a htpasswd file. To create a
@@ -120,7 +120,7 @@ file must be in a input named ``file``.
 
 
 Extracting files
-----------------
+++++++++++++++++
 
 Tupi is capable of extracting ``.tar.gz`` files. To extract files you send a
 POST request to the "/e/" path in the server. This request must also have the
@@ -150,7 +150,7 @@ input named ``file``.
 
 
 Using https
------------
++++++++++++
 
 To use https you need to start tupi with ``-certfile`` and ``-keyfile``
 flags.
