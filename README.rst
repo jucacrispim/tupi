@@ -36,7 +36,7 @@ And install the program with:
 Usage
 -----
 
-Tupi is create to serve and upload files to a directory. So first lets create
+Tupi was created to serve and upload files to a directory. So first lets create
 a directory with files
 
 .. code-block:: sh
