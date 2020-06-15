@@ -129,7 +129,7 @@ input named ``file``.
 
 .. code-block:: sh
 
-   $ curl --user test:123 -F 'file=@/home/juca/mysrc/tupi/testdata/test.tar.gz' http://localhost:8080/e/
+   $ curl --user test:123 -F 'file=@/home/juca/test.tar.gz' http://localhost:8080/e/
    bla/
    bla/two.txt
    bla/ble/
