@@ -1,6 +1,6 @@
 Tupi - A simple http server
 ============================
-.. Fuck you github!!
+
 .. raw:: html
 
     <img src="https://raw.githubusercontent.com/jucacrispim/tupi/master/logo.svg" height="100px">
@@ -33,20 +33,51 @@ And install the program with:
    For all make targets use ``make help``
 
 
-And now you can start the server using the command ``tupi``
+Usage
+-----
+
+Tupi is create to serve and upload files to a directory. So first lets create
+a directory with files
 
 .. code-block:: sh
 
-   $ tupi
+   $ mkdir myfiles
+   $ echo "My first file" > myfiles/file.txt
 
-This is going to serve the files in the default directory in the port
-8080
 
-Use the option ``-h`` for full information
+Serving files
+-------------
+
+You can start the server using the command ``tupi``
+
+.. code-block:: sh
+
+   $ tupi -root myfiles
+
+This is going to serve the files in the ``myfiles`` directory and the server
+will listen in the port 8080
+
+Use the option ``-h`` for all the options for tupi.
 
 .. code-block:: sh
 
    $ tupi -h
+
+With the server running we can fetch files from the directory.
+
+.. code-block:: sh
+
+   $ curl http://localhost:8080/file.txt
+   My first file
+
+You can also list the contents of a directory:
+
+.. code-block:: sh
+
+   $ curl http://localhost:8080/
+   <pre>
+   <a href="file.txt">file.txt</a>
+   </pre>
 
 
 Uploading files
@@ -64,18 +95,57 @@ And start tupi with the ``-htpasswd`` flag:
 
 .. code-block:: sh
 
-   $ tupi -htpasswd /my/htpasswd
+   $ tupi -root myfiles -htpasswd /my/htpasswd
 
 
 .. warning::
 
-   Your htpasswd file must not be within the root directory being served
+   Your htpasswd file MUST NOT be within the root directory being served
    by tupi
+
+Now you can upload files sending a POST request to the "/u/" path in the server.
+The request must have the ``multipart/form-data`` Content-Type header and the
+file must be in a input named ``file``.
+
+.. code-block:: sh
+
+   $ curl --user test:123 -F 'file=@/home/juca/powerreplica.jpg' http://localhost:8080/u/
+   powerreplica.jpg
+
+   $ curl http://localhost:8080/
+   <pre>
+   <a href="file.txt">file.txt</a>
+   <a href="powerreplica.jpg">powerreplica.jpg</a>
+   </pre>
 
 
 Extracting files
 ----------------
 
+Tupi is capable of extracting ``.tar.gz`` files. To extract files you send a
+POST request to the "/e/" path in the server. This request must also have the
+``multipart/form-data`` Content-Type header and the file must be in a
+input named ``file``.
+
+.. code-block:: sh
+
+   $ curl --user test:123 -F 'file=@/home/juca/mysrc/tupi/testdata/test.tar.gz' http://localhost:8080/e/
+   bla/
+   bla/two.txt
+   bla/ble/
+   bla/ble/four.txt
+   bla/ble/bad.txt
+   bla/ble/three.txt
+   bla/one.txt
+
+   $ curl http://localhost:8080/
+   <pre>
+   <a href="9236a523805e4f7b-test.tar.gz">9236a523805e4f7b-test.tar.gz</a>
+   <a href="bla/">bla/</a>
+   <a href="ea34f2a61b74af3d-test.tar.gz">ea34f2a61b74af3d-test.tar.gz</a>
+   <a href="file.txt">file.txt</a>
+   <a href="powerreplica.jpg">powerreplica.jpg</a>
+   </pre>
 
 
 
@@ -87,4 +157,4 @@ flags.
 
 .. code-block:: sh
 
-  $ tupi -certfile /my/file.pem -keyfile /my/file.key
+  $ tupi -root myfiles -certfile /my/file.pem -keyfile /my/file.key

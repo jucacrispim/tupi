@@ -160,6 +160,7 @@ func recieveAndExtract(w http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 	defer file.Close()
+
 	files, err := extractFiles(file, rootDir)
 	if err != nil {
 		panic(err)

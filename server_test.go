@@ -18,10 +18,8 @@
 package main
 
 import (
-	"io"
 	"io/ioutil"
 	"log"
-	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -101,24 +99,17 @@ func TestRecieveFile(t *testing.T) {
 	rdir := "/tmp/tupitest"
 	os.MkdirAll(rdir, 0755)
 	defer os.RemoveAll(rdir)
-	// https://stackoverflow.com/questions/43904974/
-	pr, pw := io.Pipe()
-	writer := multipart.NewWriter(pw)
 
 	server := SetupServer(":8000", rdir, 300, fpath, "/u/", "/e/", 10<<20)
-	for _, test := range tests {
-		go func() {
-			defer writer.Close()
-			part, err := writer.CreateFormFile("file", "file.txt")
-			if err != nil {
-				t.Error(err)
-			}
-			part.Write([]byte("test"))
-		}()
+	pr, boundary, err := createMultipartPipeReader("file.txt", []byte("test"))
+	if err != nil {
+		t.Errorf("error creating reader")
+	}
 
+	for _, test := range tests {
 		req, _ := http.NewRequest(test.method, "/u/", pr)
 		req.SetBasicAuth(test.user, test.passwd)
-		req.Header.Set("Content-Type", test.ctype+"; boundary="+writer.Boundary())
+		req.Header.Set("Content-Type", test.ctype+"; boundary="+boundary)
 		w := httptest.NewRecorder()
 		server.Handler.ServeHTTP(w, req)
 		status := w.Code
@@ -140,30 +131,22 @@ func TestRecieveAndExtract(t *testing.T) {
 		{"POST", UPLOADCONTENTTYPE, 201, "test", "123"},
 	}
 
-	// https://stackoverflow.com/questions/43904974/
-	pr, pw := io.Pipe()
-	writer := multipart.NewWriter(pw)
-
 	rdir := "/tmp/tupitest"
 	os.MkdirAll(rdir, 0755)
 	defer os.RemoveAll(rdir)
 
+	b, _ := ioutil.ReadFile("./testdata/test.tar.gz")
+	pr, boundary, err := createMultipartPipeReader("test.tar.gz", b)
+	if err != nil {
+		t.Errorf("error creating reader")
+	}
+
 	server := SetupServer(":8000", rdir, 300, fpath, "/u/", "/e/", 10<<20)
 	for _, test := range tests {
-		go func() {
-			defer writer.Close()
-			part, err := writer.CreateFormFile("file", "test.tar.gz")
-			if err != nil {
-				t.Error(err)
-			}
-			b, _ := ioutil.ReadFile("./testdata/test.tar.gz")
-			part.Write(b)
-
-		}()
 
 		req, _ := http.NewRequest(test.method, "/e/", pr)
 		req.SetBasicAuth(test.user, test.passwd)
-		req.Header.Set("Content-Type", test.ctype+"; boundary="+writer.Boundary())
+		req.Header.Set("Content-Type", test.ctype+"; boundary="+boundary)
 		w := httptest.NewRecorder()
 		server.Handler.ServeHTTP(w, req)
 		status := w.Code
@@ -172,7 +155,7 @@ func TestRecieveAndExtract(t *testing.T) {
 		}
 	}
 
-	_, err := os.Stat(filepath.Join(rdir, "bla"))
+	_, err = os.Stat(filepath.Join(rdir, "bla"))
 	if err != nil {
 		t.Errorf("Error extracting file: %s", err)
 	}

@@ -23,6 +23,39 @@ import (
 	"testing"
 )
 
+func TestWriteFile(t *testing.T) {
+	dir := "/tmp/tupitest"
+	os.MkdirAll(dir, 0755)
+	defer os.RemoveAll(dir)
+
+	var tests = []struct {
+		content   []byte
+		randfname bool
+	}{
+		{[]byte("oi"), false},
+		{[]byte("oi"), true},
+	}
+
+	for _, test := range tests {
+		r, err := createMultipartReader("file.txt", test.content)
+		if err != nil {
+			t.Errorf("Error creating reader %s", err)
+
+		}
+
+		fname, err := writeFile(dir, r, test.randfname)
+		if err != nil {
+			t.Errorf("Error writing file: %s", err)
+		}
+
+		if fname != "file.txt" && !test.randfname {
+			t.Errorf("File %s not present", fname)
+		}
+
+	}
+
+}
+
 func TestExtractFiles(t *testing.T) {
 	f, _ := os.Open("./testdata/test.tar.gz")
 	root_dir := "/tmp/xx"

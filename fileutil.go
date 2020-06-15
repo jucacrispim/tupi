@@ -78,17 +78,16 @@ func writeFile(dir string, r *multipart.Reader, randfname bool) (string, error) 
 		f.WriteAt([]byte(c), off)
 		err = f.Sync()
 		if err != nil {
-			return fname, nil
+			return fname, err
 		}
 		off += int64(len(c))
+
+		part, err = r.NextPart()
+
 		if err == io.EOF {
 			break
 		}
 
-		part, err = r.NextPart()
-		if err != nil {
-			return fname, err
-		}
 	}
 	return fname, nil
 }
