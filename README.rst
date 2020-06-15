@@ -140,9 +140,7 @@ input named ``file``.
 
    $ curl http://localhost:8080/
    <pre>
-   <a href="9236a523805e4f7b-test.tar.gz">9236a523805e4f7b-test.tar.gz</a>
    <a href="bla/">bla/</a>
-   <a href="ea34f2a61b74af3d-test.tar.gz">ea34f2a61b74af3d-test.tar.gz</a>
    <a href="file.txt">file.txt</a>
    <a href="powerreplica.jpg">powerreplica.jpg</a>
    </pre>
