@@ -12,8 +12,8 @@ way to serve files from, and upload file to, a directory.
 Build & install
 ---------------
 
-Tupi is written in go so you need the go compiler installed & runtime. With
-those installed clone the code:
+Tupi is written in go so you need the go compiler installed. With that installed
+clone the code:
 
 .. code-block:: sh
 
