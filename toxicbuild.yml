@@ -7,7 +7,7 @@ envvars:
 
 steps:
   - name: Install courtney
-    command: install github.com/dave/courtney
+    command: go install github.com/dave/courtney
 
   - name: Build
     command: make build
