@@ -2,6 +2,10 @@ language: go
 versions:
   - '1.20'
 
+envvars:
+  PATH: "$PATH:$HOME/go/bin"
+  GOBIN: $HOME/go/bin
+
 steps:
   - name: Install courtney
     command: make setupenv
@@ -11,5 +15,3 @@ steps:
 
   - name: Test & coverage
     command: echo $PATH && make cov
-    envvars:
-      PATH: "$PATH:$HOME/go/bin:$HOME/usr/bin/go"
