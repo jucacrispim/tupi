@@ -6,6 +6,7 @@ install_courtney(){
 }
 
 setup_env(){
+    mkdir -p ~/go/bin
     install_courtney
 }
 
