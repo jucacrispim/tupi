@@ -1,6 +1,11 @@
 #!/bin/bash
 
-out=`courtney -e -v -t ./...`
+courtney_cmd=courtney
+if [ "$ENV" == "ci" ]
+then
+   courtney_cmd=~/go/bin/courtney
+fi
+out=`$courtney_cmd -e -v -t ./...`
 error=$?
 
 if [ "$error" != "0" ]

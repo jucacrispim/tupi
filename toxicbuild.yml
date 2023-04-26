@@ -4,6 +4,7 @@ versions:
 
 envvars:
   PATH: "$PATH:$HOME/go/bin"
+  ENV: ci
 
 steps:
   - name: Install courtney
