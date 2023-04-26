@@ -16,6 +16,10 @@ build:
 test:
 	go test -v ./...
 
+.PHONY: setupenv # - Install needed tools for tests/docs
+setupenv:
+	./build-scripts/env.sh setup-env
+
 .PHONY: cov # - Run all tests and check coverage
 cov:
 	./build-scripts/check_coverage.sh
