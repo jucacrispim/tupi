@@ -3,8 +3,7 @@
 install_courtney(){
     go get -u github.com/dave/courtney
     go install github.com/dave/courtney
-    ls ~/go/bin
-    ls ~/usr/go/bin
+    which courtney
 }
 
 setup_env(){
