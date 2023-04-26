@@ -4,7 +4,7 @@ versions:
 
 steps:
   - name: Install courtney
-    command: go install github.com/dave/courtney
+    command: go get -u github.com/dave/courtney && go install github.com/dave/courtney
 
   - name: Build
     command: make build
