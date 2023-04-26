@@ -1,6 +1,6 @@
 language: go
 versions:
-  - '1.14'
+  - '1.20'
 
 steps:
   - name: Install courtney
