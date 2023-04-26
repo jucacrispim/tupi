@@ -2,9 +2,12 @@ language: go
 versions:
   - '1.20'
 
+envvars:
+  - PATH: "$PATH:$HOME/go/bin"
+
 steps:
   - name: Install courtney
-    command: go get -u github.com/dave/courtney && go install github.com/dave/courtney
+    command: install github.com/dave/courtney
 
   - name: Build
     command: make build
