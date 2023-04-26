@@ -3,7 +3,7 @@ versions:
   - '1.20'
 
 envvars:
-  - PATH: "$PATH:$HOME/go/bin"
+  PATH: "$PATH:$HOME/go/bin"
 
 steps:
   - name: Install courtney
