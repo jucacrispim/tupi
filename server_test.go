@@ -45,9 +45,10 @@ func TestShowFile(t *testing.T) {
 		{"/impossible.txt", "GET", 403},
 		{"/file.txt", "GET", 200},
 		{"/file.txt", "POST", 405},
+		{"/", "GET", 200},
 		{"/../server.go", "GET", 400},
 	}
-	server := SetupServer(":8000", "./testdata", 300, "", "/u/", "/e/", 10<<20)
+	server := SetupServer(":8000", "./testdata", 300, "", "/u/", "/e/", 10<<20, true)
 	for _, test := range tests {
 		req, _ := http.NewRequest(test.method, test.path, nil)
 		w := httptest.NewRecorder()
@@ -100,7 +101,7 @@ func TestRecieveFile(t *testing.T) {
 	os.MkdirAll(rdir, 0755)
 	defer os.RemoveAll(rdir)
 
-	server := SetupServer(":8000", rdir, 300, fpath, "/u/", "/e/", 10<<20)
+	server := SetupServer(":8000", rdir, 300, fpath, "/u/", "/e/", 10<<20, true)
 	pr, boundary, err := createMultipartPipeReader("file.txt", []byte("test"))
 	if err != nil {
 		t.Errorf("error creating reader")
@@ -142,7 +143,7 @@ func TestRecieveAndExtract(t *testing.T) {
 		t.Errorf("error creating reader")
 	}
 
-	server := SetupServer(":8000", rdir, 300, fpath, "/u/", "/e/", 10<<20)
+	server := SetupServer(":8000", rdir, 300, fpath, "/u/", "/e/", 10<<20, false)
 	for _, test := range tests {
 
 		req, _ := http.NewRequest(test.method, "/e/", pr)

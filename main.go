@@ -15,7 +15,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with tupi. If not, see <http://www.gnu.org/licenses/>.
 
-//+build !test
+//go:build !test
+// +build !test
 
 package main
 
@@ -40,6 +41,10 @@ func main() {
 	certfile := flag.String("certfile", "", "Path for the tls certificate file")
 	keyfile := flag.String("keyfile", "", "Path for the tls key file")
 	daemon := flag.Bool("daemon", false, "Runs the server in background")
+	defaultToIndex := flag.Bool(
+		"default-to-index",
+		false,
+		"Returns the index.html instead of listing a directory")
 	logfile := flag.String(
 		"logfile",
 		"tupi.log",
@@ -52,7 +57,7 @@ func main() {
 	flag.Parse()
 
 	server := SetupServer(*host, *rdir, *timeout, *htpasswdFile, *upath,
-		*epath, *maxUpload)
+		*epath, *maxUpload, *defaultToIndex)
 
 	has_cert := *certfile != ""
 	has_key := *keyfile != ""

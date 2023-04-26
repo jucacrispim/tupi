@@ -38,6 +38,9 @@ var extractPath string = "/e/"
 var maxUpload int64 = 10 << 20
 var maxFileMemory int64 = 10 << 20
 var htpasswdFile string = ""
+var defaultToIndex bool = false
+
+const indexFile = "index.html"
 
 type statusedResponseWriter struct {
 	http.ResponseWriter
@@ -67,6 +70,10 @@ func setMaxUpload(mupload int64) {
 
 func setHtpasswordFile(fpath string) {
 	htpasswdFile = fpath
+}
+
+func setDefaultToIndex(def bool) {
+	defaultToIndex = def
 }
 
 // route is responsible for calling the proper handler based in the
@@ -180,7 +187,11 @@ func showFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	path := rootDir + req.URL.Path
+	fpath := req.URL.Path
+	if strings.HasSuffix(fpath, "/") && defaultToIndex {
+		fpath += indexFile
+	}
+	path := rootDir + fpath
 	http.ServeFile(w, req, path)
 }
 
@@ -218,7 +229,8 @@ func SetupServer(
 	htpasswd string,
 	upath string,
 	epath string,
-	maxUpload int64) *http.Server {
+	maxUpload int64,
+	defaultToIndex bool) *http.Server {
 
 	// read this for new implementation
 	// https://github.com/golang/go/issues/35626
@@ -228,6 +240,7 @@ func SetupServer(
 	setUploadPath(upath)
 	setExtractPath(epath)
 	setMaxUpload(maxUpload)
+	setDefaultToIndex(defaultToIndex)
 
 	handler := logRequest(http.HandlerFunc(route))
 	server := &http.Server{

@@ -79,6 +79,13 @@ You can also list the contents of a directory:
    <a href="file.txt">file.txt</a>
    </pre>
 
+You can also, instead of listing the contents of a directory, return the
+index.html file in it. To do so use the option ``default-to-index``.
+
+.. code-block:: sh
+
+   $ tupi -default-to-index
+
 
 Uploading files
 +++++++++++++++
