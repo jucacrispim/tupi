@@ -156,6 +156,7 @@ func extractFiles(file io.Reader, root_dir string) ([]string, error) {
 			files = append(files, fname)
 
 		default:
+			// notest
 			log.Printf("Unknown type %d for %s", hdr.Typeflag, path)
 		}
 

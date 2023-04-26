@@ -3,8 +3,11 @@ versions:
   - '1.14'
 
 steps:
+  - name: Install courtney
+    command: go install github.com/dave/courtney
+
   - name: Build
     command: make build
 
-  - name: Test
-    command: make test
+  - name: Test & coverage
+    command: make cov

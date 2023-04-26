@@ -16,6 +16,10 @@ build:
 test:
 	go test -v ./...
 
+.PHONY: cov # - Run all tests and check coverage
+cov:
+	./build-scripts/check_coverage.sh
+
 
 .PHONY: run # - Run the program. You can use `make run ARGS="-host :9090 -root=/"`
 run:

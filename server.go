@@ -117,6 +117,7 @@ func checkUploadRequest(
 	req.Body = http.MaxBytesReader(w, req.Body, maxUpload)
 	reader, mperr := req.MultipartReader()
 	if mperr != nil {
+		// notest
 		err.StatusCode = http.StatusBadRequest
 		err.Err = errors.New("Bad request")
 		return nil, err

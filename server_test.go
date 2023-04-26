@@ -129,6 +129,7 @@ func TestRecieveAndExtract(t *testing.T) {
 		passwd string
 	}{
 		{"POST", UPLOADCONTENTTYPE, 201, "test", "123"},
+		{"GET", UPLOADCONTENTTYPE, 405, "test", "123"},
 	}
 
 	rdir := "/tmp/tupitest"

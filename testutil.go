@@ -29,13 +29,14 @@ func createMultipartPipeReader(fname string, content []byte) (
 	pr, pw := io.Pipe()
 	writer := multipart.NewWriter(pw)
 
-	go func() {
+	go func() error {
 		defer writer.Close()
 		part, err := writer.CreateFormFile("file", "file.txt")
 		if err != nil {
-			return
+			return err
 		}
 		part.Write([]byte(content))
+		return nil
 	}()
 
 	return pr, writer.Boundary(), nil
