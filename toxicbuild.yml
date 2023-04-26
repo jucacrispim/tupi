@@ -11,3 +11,5 @@ steps:
 
   - name: Test & coverage
     command: echo $PATH && make cov
+    envvars:
+      PATH: "$PATH:$HOME/go/bin:$HOME/usr/bin/go"
