@@ -40,19 +40,10 @@ func main() {
 	maxUpload := flag.Int64("maxupload", 10<<20, "Max size for uploaded files")
 	certfile := flag.String("certfile", "", "Path for the tls certificate file")
 	keyfile := flag.String("keyfile", "", "Path for the tls key file")
-	daemon := flag.Bool("daemon", false, "Runs the server in background")
 	defaultToIndex := flag.Bool(
 		"default-to-index",
 		false,
 		"Returns the index.html instead of listing a directory")
-	logfile := flag.String(
-		"logfile",
-		"tupi.log",
-		"Log file used when running in backgroud")
-	pidfile := flag.String(
-		"pidfile",
-		"tupi.pid",
-		"Pid file for the background server")
 
 	flag.Parse()
 
@@ -64,10 +55,6 @@ func main() {
 	}
 
 	fmt.Println("Tupi is serving at " + *host)
-
-	if *daemon {
-		daemonize(*logfile, *logfile, *pidfile)
-	}
 
 	server := SetupServer(*host, *rdir, *timeout, *htpasswdFile, *upath,
 		*epath, *maxUpload, *defaultToIndex)
