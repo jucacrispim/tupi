@@ -56,9 +56,6 @@ func main() {
 
 	flag.Parse()
 
-	server := SetupServer(*host, *rdir, *timeout, *htpasswdFile, *upath,
-		*epath, *maxUpload, *defaultToIndex)
-
 	has_cert := *certfile != ""
 	has_key := *keyfile != ""
 
@@ -66,11 +63,15 @@ func main() {
 		panic("To use HTTPS you must pass certfile and keyfile")
 	}
 
-	fmt.Println("Tupi is serving at " + server.Addr)
+	fmt.Println("Tupi is serving at " + *host)
 
 	if *daemon {
 		daemonize(*logfile, *logfile, *pidfile)
 	}
+
+	server := SetupServer(*host, *rdir, *timeout, *htpasswdFile, *upath,
+		*epath, *maxUpload, *defaultToIndex)
+
 	var err error = nil
 	if has_cert && has_key {
 		server.ListenAndServeTLS(*certfile, *keyfile)
