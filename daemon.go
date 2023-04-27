@@ -27,6 +27,8 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 func daemonize(stdout string, stderr string, pidfile string) error {
@@ -71,6 +73,6 @@ func redirIO(stream *os.File, path string) error {
 	if err != nil {
 		return errors.New("Error opening " + path)
 	}
-	syscall.Dup2(int(f.Fd()), int(stream.Fd()))
+	unix.Dup2(int(f.Fd()), int(stream.Fd()))
 	return nil
 }
