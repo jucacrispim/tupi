@@ -1,4 +1,4 @@
-// Copyright 2020, 2023 Juca Crispim <juca@poraodojuca.net>
+// Copyright 2023 Juca Crispim <juca@poraodojuca.net>
 
 // This file is part of tupi.
 
@@ -15,34 +15,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with tupi. If not, see <http://www.gnu.org/licenses/>.
 
-//go:build !test
-// +build !test
-
 package main
 
-// notest
-
 import (
-	"fmt"
-	"strconv"
+	"io/ioutil"
+	"log"
+	"os"
+	"testing"
 )
 
-func main() {
-	conf, err := GetConfig()
-	if err != nil {
-		panic("Bad config " + err.Error())
-	}
-	has_cert := conf.HasCert()
-	has_key := conf.HasKey()
-
-	if (has_cert || has_key) && !(has_cert && has_key) {
-		panic("To use HTTPS you must pass certfile and keyfile")
-	}
-
-	ports := strconv.FormatInt(int64(conf.Port), 10)
-	host := fmt.Sprintf("%s:%s", conf.Host, ports)
-	fmt.Println("Tupi is serving at " + host)
-
-	server := SetupServer(conf)
-	server.Run()
+func TestMain(m *testing.M) {
+	log.SetOutput(ioutil.Discard)
+	os.Chmod("./testdata/impossible.txt", 0000)
+	status := m.Run()
+	os.Chmod("./testdata/impossible.txt", 0644)
+	os.Exit(status)
 }

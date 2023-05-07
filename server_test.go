@@ -1,4 +1,4 @@
-// Copyright 2020 Juca Crispim <juca@poraodojuca.net>
+// Copyright 2020, 2023 Juca Crispim <juca@poraodojuca.net>
 
 // This file is part of tupi.
 
@@ -19,21 +19,12 @@ package main
 
 import (
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 )
-
-func TestMain(m *testing.M) {
-	log.SetOutput(ioutil.Discard)
-	os.Chmod("./testdata/impossible.txt", 0000)
-	status := m.Run()
-	os.Chmod("./testdata/impossible.txt", 0644)
-	os.Exit(status)
-}
 
 func TestShowFile(t *testing.T) {
 	var tests = []struct {
@@ -48,11 +39,22 @@ func TestShowFile(t *testing.T) {
 		{"/", "GET", 200},
 		{"/../server.go", "GET", 400},
 	}
-	server := SetupServer(":8000", "./testdata", 300, "", "/u/", "/e/", 10<<20, true)
+	conf := Config{
+		Host:           "0.0.0.0",
+		Port:           8000,
+		RootDir:        "./testdata",
+		Timeout:        300,
+		HtpasswdFile:   "",
+		UploadPath:     "/u/",
+		ExtractPath:    "/e/",
+		MaxUploadSize:  10 << 20,
+		DefaultToIndex: true,
+	}
+	server := SetupServer(conf)
 	for _, test := range tests {
 		req, _ := http.NewRequest(test.method, test.path, nil)
 		w := httptest.NewRecorder()
-		server.Handler.ServeHTTP(w, req)
+		server.Servers[0].Handler.ServeHTTP(w, req)
 		status := w.Code
 		if status != test.status {
 			t.Errorf("got %d, expected %d", status, test.status)
@@ -101,7 +103,18 @@ func TestRecieveFile(t *testing.T) {
 	os.MkdirAll(rdir, 0755)
 	defer os.RemoveAll(rdir)
 
-	server := SetupServer(":8000", rdir, 300, fpath, "/u/", "/e/", 10<<20, true)
+	conf := Config{
+		Host:           "0.0.0.0",
+		Port:           8000,
+		RootDir:        rdir,
+		Timeout:        300,
+		HtpasswdFile:   fpath,
+		UploadPath:     "/u/",
+		ExtractPath:    "/e/",
+		MaxUploadSize:  10 << 20,
+		DefaultToIndex: true,
+	}
+	server := SetupServer(conf)
 	pr, boundary, err := createMultipartPipeReader("file.txt", []byte("test"))
 	if err != nil {
 		t.Errorf("error creating reader")
@@ -112,7 +125,7 @@ func TestRecieveFile(t *testing.T) {
 		req.SetBasicAuth(test.user, test.passwd)
 		req.Header.Set("Content-Type", test.ctype+"; boundary="+boundary)
 		w := httptest.NewRecorder()
-		server.Handler.ServeHTTP(w, req)
+		server.Servers[0].Handler.ServeHTTP(w, req)
 		status := w.Code
 		if status != test.status {
 			t.Errorf("got %d, expected %d", status, test.status)
@@ -143,14 +156,25 @@ func TestRecieveAndExtract(t *testing.T) {
 		t.Errorf("error creating reader")
 	}
 
-	server := SetupServer(":8000", rdir, 300, fpath, "/u/", "/e/", 10<<20, false)
+	conf := Config{
+		Host:           "0.0.0.0",
+		Port:           8000,
+		RootDir:        rdir,
+		Timeout:        300,
+		HtpasswdFile:   fpath,
+		UploadPath:     "/u/",
+		ExtractPath:    "/e/",
+		MaxUploadSize:  10 << 20,
+		DefaultToIndex: true,
+	}
+	server := SetupServer(conf)
 	for _, test := range tests {
 
 		req, _ := http.NewRequest(test.method, "/e/", pr)
 		req.SetBasicAuth(test.user, test.passwd)
 		req.Header.Set("Content-Type", test.ctype+"; boundary="+boundary)
 		w := httptest.NewRecorder()
-		server.Handler.ServeHTTP(w, req)
+		server.Servers[0].Handler.ServeHTTP(w, req)
 		status := w.Code
 		if status != test.status {
 			t.Errorf("got %d, expected %d", status, test.status)
@@ -161,5 +185,39 @@ func TestRecieveAndExtract(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error extracting file: %s", err)
 	}
+}
 
+func TestHTTPServer_RunOneServer(t *testing.T) {
+	called := false
+	startServerTestFn = func(s *http.Server) {
+		called = true
+	}
+	defer func() {
+		startServerTestFn = nil
+	}()
+	conf := Config{}
+	s := SetupServer(conf)
+	s.Run()
+
+	if !called {
+		t.Fatalf("startServerFn was not called!")
+	}
+}
+
+func TestHTTPServer_RunMultipleServers(t *testing.T) {
+	called := false
+	startServerTestFn = func(s *http.Server) {
+		called = true
+	}
+	defer func() {
+		startServerTestFn = nil
+	}()
+	conf := Config{}
+	s := SetupServer(conf)
+	s.Servers = append(s.Servers, s.Servers[0])
+	s.Run()
+
+	if !called {
+		t.Fatalf("startServerFn not called")
+	}
 }

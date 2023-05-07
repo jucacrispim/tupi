@@ -14,4 +14,4 @@ steps:
     command: make build
 
   - name: Test & coverage
-    command: echo $PATH && make cov
+    command: make cov

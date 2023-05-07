@@ -1,4 +1,4 @@
-// Copyright 2020 Juca Crispim <juca@poraodojuca.net>
+// Copyright 2020, 2023 Juca Crispim <juca@poraodojuca.net>
 
 // This file is part of tupi.
 
@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -42,12 +43,63 @@ var defaultToIndex bool = false
 
 const indexFile = "index.html"
 
-type statusedResponseWriter struct {
+type HTTPServer struct {
+	Conf Config
+	// We have one server for each port we are listen
+	Servers []*http.Server
+}
+
+func (s HTTPServer) Run() {
+	startServer := getStartServerFn(s)
+
+	if len(s.Servers) == 1 {
+		startServer(s.Servers[0])
+	} else {
+		server := s.Servers[0]
+		for _, serv := range s.Servers[1:] {
+			go startServer(serv)
+		}
+		startServer(server)
+	}
+}
+
+// SetupServer creates a new instance of the tupi
+// http server. You can start it using “HTTPServer.Run“
+func SetupServer(conf Config) HTTPServer {
+
+	// read this for new implementation
+	// https://github.com/golang/go/issues/35626
+
+	setRootDir(conf.RootDir)
+	setHtpasswordFile(conf.HtpasswdFile)
+	setUploadPath(conf.UploadPath)
+	setExtractPath(conf.ExtractPath)
+	setMaxUpload(conf.MaxUploadSize)
+	setDefaultToIndex(conf.DefaultToIndex)
+
+	handler := logRequest(http.HandlerFunc(route))
+	s := HTTPServer{
+		Conf: conf,
+	}
+	servers := make([]*http.Server, 0)
+	addr := fmt.Sprintf("%s:%s", conf.Host, strconv.FormatInt(int64(conf.Port), 10))
+	server := &http.Server{
+		Addr:         addr,
+		Handler:      handler,
+		ReadTimeout:  time.Duration(conf.Timeout) * time.Second,
+		WriteTimeout: time.Duration(conf.Timeout) * time.Second,
+	}
+	servers = append(servers, server)
+	s.Servers = servers
+	return s
+}
+
+type StatusedResponseWriter struct {
 	http.ResponseWriter
 	status int
 }
 
-func (w *statusedResponseWriter) WriteHeader(code int) {
+func (w *StatusedResponseWriter) WriteHeader(code int) {
 	w.status = code
 	w.ResponseWriter.WriteHeader(code)
 }
@@ -197,7 +249,7 @@ func showFile(w http.ResponseWriter, req *http.Request) {
 
 func logRequest(h http.Handler) http.Handler {
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		sw := &statusedResponseWriter{w, http.StatusOK}
+		sw := &StatusedResponseWriter{w, http.StatusOK}
 		h.ServeHTTP(sw, req)
 		remote := getIp(req)
 		path := req.URL.Path
@@ -219,35 +271,23 @@ func getIp(req *http.Request) string {
 	return ip
 }
 
-// SetupServer creates a new instance of the tupi
-// http server. You can start it using `ListenAndServe` or
-// `ListenAndServeTLS` to use https
-func SetupServer(
-	addr string,
-	rdir string,
-	timeout int,
-	htpasswd string,
-	upath string,
-	epath string,
-	maxUpload int64,
-	defaultToIndex bool) *http.Server {
+// for tests
+type startServerFn func(server *http.Server)
 
-	// read this for new implementation
-	// https://github.com/golang/go/issues/35626
+var startServerTestFn startServerFn = nil
 
-	setRootDir(rdir)
-	setHtpasswordFile(htpasswd)
-	setUploadPath(upath)
-	setExtractPath(epath)
-	setMaxUpload(maxUpload)
-	setDefaultToIndex(defaultToIndex)
-
-	handler := logRequest(http.HandlerFunc(route))
-	server := &http.Server{
-		Addr:         addr,
-		Handler:      handler,
-		ReadTimeout:  time.Duration(timeout) * time.Second,
-		WriteTimeout: time.Duration(timeout) * time.Second,
+func getStartServerFn(s HTTPServer) startServerFn {
+	// notest
+	if startServerTestFn != nil {
+		return startServerTestFn
 	}
-	return server
+	startServer := func(server *http.Server) {
+		if s.Conf.HasCert() && s.Conf.HasKey() {
+			server.ListenAndServeTLS(s.Conf.CertFilePath, s.Conf.KeyFilePath)
+		} else {
+			server.ListenAndServe()
+		}
+
+	}
+	return startServer
 }
