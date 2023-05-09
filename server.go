@@ -194,7 +194,10 @@ func recieveFile(w http.ResponseWriter, req *http.Request) {
 	}
 	fname, err := writeFile(rootDir, reader, false)
 	if err != nil && err != io.EOF {
-		panic(err)
+		// notest
+		log.Printf("ERROR: %s\n", err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(fname + "\n"))
@@ -210,20 +213,29 @@ func recieveAndExtract(w http.ResponseWriter, req *http.Request) {
 
 	fname, err := writeFile(rootDir, reader, true)
 	if err != nil && err != io.EOF {
-		panic(err)
+		// notest
+		log.Printf("ERROR: %s\n", err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 	fpath := filepath.Join(rootDir, fname)
 
 	defer os.RemoveAll(fpath)
 	file, err := os.Open(fpath)
 	if err != nil {
-		panic(err)
+		// notest
+		log.Printf("ERROR: %s\n", err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 	defer file.Close()
 
 	files, err := extractFiles(file, rootDir)
 	if err != nil {
-		panic(err)
+		// notest
+		log.Printf("ERROR: %s\n", err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
