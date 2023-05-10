@@ -1,2 +1,11 @@
 host = "2.2.2.2"
 port = 1234
+rootDir = "/some/dir"
+timeout = 500  # seconds
+htpasswdFile = "/some/htpasswd"
+uploadPath = "/u/"
+extractPath = "/e/"
+maxUploadSize = 10000000  # 10 MB
+certFilePath = "/some/cert.pem"
+keyFilePath = "/some/file.key"
+defaultToIndex = true
