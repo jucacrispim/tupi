@@ -20,6 +20,10 @@ test:
 setupenv:
 	./build-scripts/env.sh setup-env
 
+.PHONY: docs # - Build documentation
+docs:
+	./build-scripts/env.sh build-docs
+
 .PHONY: cov # - Run all tests and check coverage
 cov:
 	./build-scripts/check_coverage.sh

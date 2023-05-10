@@ -3,7 +3,7 @@ Tupi - A simple http server
 
 .. raw:: html
 
-    <img src="https://raw.githubusercontent.com/jucacrispim/tupi/master/logo.svg" height="100px">
+    <img src="https://raw.githubusercontent.com/jucacrispim/tupi/master/docs/source/_static/logo.svg" height="100px">
 
 Tupi is a very simple http server. Its main purpose is to provide an easy
 way to serve files from, and upload file to, a directory.
@@ -163,3 +163,10 @@ flags.
 .. code-block:: sh
 
   $ tupi -root myfiles -certfile /my/file.pem -keyfile /my/file.key
+
+
+Config file
+++++++++++++
+
+You can use a config file instead of command line options. Check the
+documentation `here <https://tupi.poraodojuca.dev/index.html#config-file>`_.
