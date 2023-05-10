@@ -19,6 +19,7 @@ package main
 
 import (
 	"flag"
+	"os"
 	"testing"
 )
 
@@ -65,8 +66,36 @@ func TestGetConfig_FromFile(t *testing.T) {
 	if conf.Port != 1234 {
 		t.Fatalf("Bad port GetConfigFromFile %d", conf.Port)
 	}
-	if conf.RootDir != "." {
-		t.Fatalf("Bad root dir GetConfigFromFile %s", conf.Host)
+	if conf.RootDir != "/some/dir" {
+		t.Fatalf("Bad root dir GetConfigFromFile %s", conf.RootDir)
+	}
+}
+
+func TestGetConfig_FromFile_EnvVar(t *testing.T) {
+	old_command := flag.CommandLine
+	testCommandLine = []string{"-host", "1.1.1.1"}
+	os.Setenv("TUPI_CONFIG_FILE", "./testdata/conf.toml")
+	defer os.Unsetenv("TUPI_CONFIG_FILE")
+	flag.CommandLine = flag.NewFlagSet("tupi", flag.ExitOnError)
+	defer func() {
+		testCommandLine = nil
+		flag.CommandLine = old_command
+	}()
+
+	conf, err := GetConfig()
+	if err != nil {
+		t.Fatalf("Errr GetConfigFromFile %s", err.Error())
+	}
+
+	if conf.Host != "2.2.2.2" {
+		t.Fatalf("Bad host GetConfigFromFile %s", conf.Host)
+	}
+
+	if conf.Port != 1234 {
+		t.Fatalf("Bad port GetConfigFromFile %d", conf.Port)
+	}
+	if conf.RootDir != "/some/dir" {
+		t.Fatalf("Bad root dir GetConfigFromFile %s", conf.RootDir)
 	}
 }
 

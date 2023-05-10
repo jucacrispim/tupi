@@ -64,10 +64,18 @@ func (c Config) IsValid() bool {
 // Config file values have precedence over command line values
 func GetConfig() (Config, error) {
 	cmdConf := GetConfigFromCommandLine()
-	if cmdConf.ConfigFile == "" {
+	envfile := os.Getenv("TUPI_CONFIG_FILE")
+	if cmdConf.ConfigFile == "" && envfile == "" {
 		return cmdConf, nil
 	}
-	fileConf, err := GetConfigFromFile(cmdConf.ConfigFile)
+	// cmd line conffile has precedence over envvar config file
+	cfg := ""
+	if cmdConf.ConfigFile != "" {
+		cfg = cmdConf.ConfigFile
+	} else {
+		cfg = envfile
+	}
+	fileConf, err := GetConfigFromFile(cfg)
 	if err != nil {
 		return Config{}, err
 	}
