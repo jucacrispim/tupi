@@ -6,8 +6,13 @@ envvars:
   PATH: "$PATH:$HOME/go/bin"
   ENV: ci
 
+system_packages:
+  - python3
+  - python3-venv
+  - python3-pip
+
 steps:
-  - name: Install courtney
+  - name: Setup test & docs env
     command: make setupenv
 
   - name: Build
