@@ -18,6 +18,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -238,5 +239,49 @@ func TestHTTPServer_RunMultipleServers(t *testing.T) {
 
 	if !called {
 		t.Fatalf("startServerFn not called")
+	}
+}
+
+func TestGetCertificate_Default(t *testing.T) {
+	info := tls.ClientHelloInfo{ServerName: "somewhere.com"}
+	c := Config{}
+	c.Domains = make(map[string]DomainConfig)
+	c.Domains["default"] = DomainConfig{
+		CertFilePath: "./testdata/test.cert",
+		KeyFilePath:  "./testdata/test.key",
+	}
+	oldconf := config
+	config = c
+	defer func() {
+		config = oldconf
+	}()
+	cert, err := getCertificate(&info)
+	if err != nil {
+		t.Fatalf("Error getCertificate default %s", err.Error())
+	}
+	if cert == nil {
+		t.Fatalf("Bad certificate")
+	}
+}
+
+func TestGetCertificate_VirtualDomain(t *testing.T) {
+	info := tls.ClientHelloInfo{ServerName: "somewhere.com"}
+	c := Config{}
+	c.Domains = make(map[string]DomainConfig)
+	c.Domains["somewhere.com"] = DomainConfig{
+		CertFilePath: "./testdata/test.cert",
+		KeyFilePath:  "./testdata/test.key",
+	}
+	oldconf := config
+	config = c
+	defer func() {
+		config = oldconf
+	}()
+	cert, err := getCertificate(&info)
+	if err != nil {
+		t.Fatalf("Error getCertificate default %s", err.Error())
+	}
+	if cert == nil {
+		t.Fatalf("Bad certificate")
 	}
 }
