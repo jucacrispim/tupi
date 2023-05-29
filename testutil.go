@@ -49,7 +49,7 @@ func createMultipartReader(fname string, content []byte) (
 		return nil, err
 	}
 	req, _ := http.NewRequest("GET", "/e/", pr)
-	req.Header.Set("Content-Type", UPLOADCONTENTTYPE+"; boundary="+boundary)
+	req.Header.Set("Content-Type", UPLOAD_CONTENT_TYPE+"; boundary="+boundary)
 	reader, err := req.MultipartReader()
 	if err != nil {
 		return nil, err

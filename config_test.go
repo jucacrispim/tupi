@@ -37,11 +37,11 @@ func TestGetConfig_FromCommandLine(t *testing.T) {
 		t.Fatalf("Error GetConfigFromCommandLine %s", err.Error())
 	}
 
-	if conf.Host != "1.1.1.1" {
-		t.Fatalf("Bad host GetConfigFromCommandLine %s", conf.Host)
+	if conf.Domains["default"].Host != "1.1.1.1" {
+		t.Fatalf("Bad host GetConfigFromCommandLine %s", conf.Domains["default"].Host)
 	}
-	if conf.RootDir != "/some/dir" {
-		t.Fatalf("Bad root dir GetConfigFromCommandLine %s", conf.RootDir)
+	if conf.Domains["default"].RootDir != "/some/dir" {
+		t.Fatalf("Bad root dir GetConfigFromCommandLine %s", conf.Domains["default"].RootDir)
 	}
 }
 
@@ -59,15 +59,42 @@ func TestGetConfig_FromFile(t *testing.T) {
 		t.Fatalf("Errr GetConfigFromFile %s", err.Error())
 	}
 
-	if conf.Host != "2.2.2.2" {
-		t.Fatalf("Bad host GetConfigFromFile %s", conf.Host)
+	if conf.Domains["default"].Host != "2.2.2.2" {
+		t.Fatalf("Bad host GetConfigFromFile %s", conf.Domains["default"].Host)
 	}
 
-	if conf.Port != 1234 {
-		t.Fatalf("Bad port GetConfigFromFile %d", conf.Port)
+	if conf.Domains["default"].Port != 1234 {
+		t.Fatalf("Bad port GetConfigFromFile %d", conf.Domains["default"].Port)
 	}
-	if conf.RootDir != "/some/dir" {
-		t.Fatalf("Bad root dir GetConfigFromFile %s", conf.RootDir)
+	if conf.Domains["default"].RootDir != "/some/dir" {
+		t.Fatalf("Bad root dir GetConfigFromFile %s", conf.Domains["default"].RootDir)
+	}
+}
+
+func TestGetConfig_FromFile_MultipleDomains(t *testing.T) {
+	old_command := flag.CommandLine
+	testCommandLine = []string{"-host", "1.1.1.1", "-conf", "./testdata/vdomains_conf.toml"}
+	flag.CommandLine = flag.NewFlagSet("tupi", flag.ExitOnError)
+	defer func() {
+		testCommandLine = nil
+		flag.CommandLine = old_command
+	}()
+
+	conf, err := GetConfig()
+	if err != nil {
+		t.Fatalf("Errr GetConfigFromFile %s", err.Error())
+	}
+
+	if conf.Domains["default"].Host != "2.2.2.2" {
+		t.Fatalf("Bad host GetConfigFromFile %s", conf.Domains["default"].Host)
+	}
+
+	if conf.Domains["domain"].Host != "3.3.3.3" {
+		t.Fatalf("Bad host GetConfigFromFile %s", conf.Domains["domain"].Host)
+	}
+
+	if conf.Domains["other.domain"].Host != "4.4.4.4" {
+		t.Fatalf("Bad host GetConfigFromFile %s", conf.Domains["other.domain"].Host)
 	}
 }
 
@@ -87,45 +114,93 @@ func TestGetConfig_FromFile_EnvVar(t *testing.T) {
 		t.Fatalf("Errr GetConfigFromFile %s", err.Error())
 	}
 
-	if conf.Host != "2.2.2.2" {
-		t.Fatalf("Bad host GetConfigFromFile %s", conf.Host)
+	if conf.Domains["default"].Host != "2.2.2.2" {
+		t.Fatalf("Bad host GetConfigFromFile %s", conf.Domains["default"].Host)
 	}
 
-	if conf.Port != 1234 {
-		t.Fatalf("Bad port GetConfigFromFile %d", conf.Port)
+	if conf.Domains["default"].Port != 1234 {
+		t.Fatalf("Bad port GetConfigFromFile %d", conf.Domains["default"].Port)
 	}
-	if conf.RootDir != "/some/dir" {
-		t.Fatalf("Bad root dir GetConfigFromFile %s", conf.RootDir)
+	if conf.Domains["default"].RootDir != "/some/dir" {
+		t.Fatalf("Bad root dir GetConfigFromFile %s", conf.Domains["default"].RootDir)
 	}
 }
 
-func TestIsValid_MissingCertFile(t *testing.T) {
-	config := Config{
+func TestValidate_MissingCertFile(t *testing.T) {
+	config := DomainConfig{
 		KeyFilePath: "some path",
 	}
-
-	if config.IsValid() {
+	c := Config{}
+	c.Domains = make(map[string]DomainConfig)
+	c.Domains["default"] = config
+	if c.Validate() == nil {
 		t.Fatalf("It says the config is valid missing certfile")
 	}
 }
 
-func TestIsValid_MissingKeyFile(t *testing.T) {
-	config := Config{
+func TestValidate_MissingKeyFile(t *testing.T) {
+	config := DomainConfig{
 		CertFilePath: "some path",
 	}
-
-	if config.IsValid() {
+	c := Config{}
+	c.Domains = make(map[string]DomainConfig)
+	c.Domains["default"] = config
+	if c.Validate() == nil {
 		t.Fatalf("It says the config is valid missing keyfile")
 	}
 }
 
-func TestIsValid_WithCertAndKeyFile(t *testing.T) {
-	config := Config{
+func TestValidate_WithCertAndKeyFile(t *testing.T) {
+	config := DomainConfig{
 		CertFilePath: "some-path",
 		KeyFilePath:  "the other",
 	}
-
-	if !config.IsValid() {
+	c := Config{}
+	c.Domains = make(map[string]DomainConfig)
+	c.Domains["default"] = config
+	if c.Validate() != nil {
 		t.Fatalf("Invalid config with cert and key file!")
 	}
+}
+
+func TestHasSSL_True(t *testing.T) {
+	old_command := flag.CommandLine
+	testCommandLine = []string{}
+	flag.CommandLine = flag.NewFlagSet("tupi", flag.ExitOnError)
+	defer func() {
+		testCommandLine = nil
+		flag.CommandLine = old_command
+	}()
+	fpath := "./testdata/conf.toml"
+	os.Setenv("TUPI_CONFIG_FILE", fpath)
+	defer os.Unsetenv("TUPI_CONFIG_FILE")
+	conf, err := GetConfig()
+	if err != nil {
+		t.Fatalf("Error reading config file for ssl false %s", err.Error())
+	}
+	if !conf.HasSSL() {
+		t.Fatalf("dont have ssl for config with ssl")
+	}
+}
+
+func TestHasSSL_False(t *testing.T) {
+	fpath := "./testdata/vdomains_conf.toml"
+	os.Setenv("TUPI_CONFIG_FILE", fpath)
+	defer os.Unsetenv("TUPI_CONFIG_FILE")
+	old_command := flag.CommandLine
+	testCommandLine = []string{}
+	flag.CommandLine = flag.NewFlagSet("tupi", flag.ExitOnError)
+	defer func() {
+		testCommandLine = nil
+		flag.CommandLine = old_command
+	}()
+
+	conf, err := GetConfig()
+	if err != nil {
+		t.Fatalf("Error reading config file for ssl false %s", err.Error())
+	}
+	if conf.HasSSL() {
+		t.Fatalf("do have ssl for config without ssl")
+	}
+
 }

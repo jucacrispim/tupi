@@ -18,6 +18,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -31,67 +32,67 @@ import (
 	"time"
 )
 
-var UPLOADCONTENTTYPE string = "multipart/form-data"
-
-var rootDir string = "."
-var uploadPath string = "/u/"
-var extractPath string = "/e/"
-var maxUpload int64 = 10 << 20
-var maxFileMemory int64 = 10 << 20
-var htpasswdFile string = ""
-var defaultToIndex bool = false
-
+const UPLOAD_CONTENT_TYPE = "multipart/form-data"
 const indexFile = "index.html"
 
-type HTTPServer struct {
+var config Config
+
+type TupiServer struct {
 	Conf Config
-	// We have one server for each port we are listen
+	// We have one server for each port we listen
 	Servers []*http.Server
 }
 
-func (s HTTPServer) Run() {
+func (s TupiServer) Run() {
 	startServer := getStartServerFn(s)
-
+	use_ssl := s.Conf.HasSSL()
 	if len(s.Servers) == 1 {
-		startServer(s.Servers[0])
+		startServer(s.Servers[0], use_ssl)
 	} else {
 		server := s.Servers[0]
 		for _, serv := range s.Servers[1:] {
-			go startServer(serv)
+			go startServer(serv, use_ssl)
 		}
-		startServer(server)
+		startServer(server, use_ssl)
 	}
 }
 
 // SetupServer creates a new instance of the tupi
 // http server. You can start it using “HTTPServer.Run“
-func SetupServer(conf Config) HTTPServer {
+func SetupServer(conf Config) TupiServer {
 
 	// read this for new implementation
 	// https://github.com/golang/go/issues/35626
 
-	setRootDir(conf.RootDir)
-	setHtpasswordFile(conf.HtpasswdFile)
-	setUploadPath(conf.UploadPath)
-	setExtractPath(conf.ExtractPath)
-	setMaxUpload(conf.MaxUploadSize)
-	setDefaultToIndex(conf.DefaultToIndex)
-
+	setConfig(conf)
 	handler := logRequest(http.HandlerFunc(route))
-	s := HTTPServer{
+	s := TupiServer{
 		Conf: conf,
 	}
 	servers := make([]*http.Server, 0)
-	addr := fmt.Sprintf("%s:%s", conf.Host, strconv.FormatInt(int64(conf.Port), 10))
+	addr := fmt.Sprintf(
+		"%s:%s",
+		conf.Domains["default"].Host,
+		strconv.FormatInt(int64(conf.Domains["default"].Port), 10))
 	server := &http.Server{
 		Addr:         addr,
 		Handler:      handler,
-		ReadTimeout:  time.Duration(conf.Timeout) * time.Second,
-		WriteTimeout: time.Duration(conf.Timeout) * time.Second,
+		ReadTimeout:  time.Duration(conf.Domains["default"].Timeout) * time.Second,
+		WriteTimeout: time.Duration(conf.Domains["default"].Timeout) * time.Second,
 	}
 	servers = append(servers, server)
 	s.Servers = servers
 	return s
+}
+
+func getCertificate(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	domain := info.ServerName
+	conf, exists := config.Domains[domain]
+	if !exists {
+		conf = config.Domains["default"]
+	}
+	cert, err := tls.LoadX509KeyPair(conf.CertFilePath, conf.KeyFilePath)
+	return &cert, err
 }
 
 type StatusedResponseWriter struct {
@@ -104,36 +105,26 @@ func (w *StatusedResponseWriter) WriteHeader(code int) {
 	w.ResponseWriter.WriteHeader(code)
 }
 
-func setRootDir(rdir string) {
-	rootDir = rdir
+func setConfig(conf Config) {
+	config = conf
 }
 
-func setUploadPath(upath string) {
-	uploadPath = upath
-}
-
-func setExtractPath(epath string) {
-	extractPath = epath
-}
-
-func setMaxUpload(mupload int64) {
-	maxUpload = mupload
-}
-
-func setHtpasswordFile(fpath string) {
-	htpasswdFile = fpath
-}
-
-func setDefaultToIndex(def bool) {
-	defaultToIndex = def
+func getConfigForRequest(req *http.Request) DomainConfig {
+	domain := strings.Split(req.Host, ":")[0]
+	domain = strings.ToLower(domain)
+	if conf, exists := config.Domains[domain]; exists {
+		return conf
+	}
+	return config.Domains["default"]
 }
 
 // route is responsible for calling the proper handler based in the
 // request path.
 func route(w http.ResponseWriter, req *http.Request) {
-	if req.URL.Path == uploadPath {
+	c := getConfigForRequest(req)
+	if req.URL.Path == c.UploadPath {
 		recieveFile(w, req)
-	} else if req.URL.Path == extractPath {
+	} else if req.URL.Path == c.ExtractPath {
 		recieveAndExtract(w, req)
 	} else {
 		showFile(w, req)
@@ -152,8 +143,8 @@ func (r *requestError) Error() string {
 func checkUploadRequest(
 	w http.ResponseWriter, req *http.Request) (*multipart.Reader, error) {
 	err := &requestError{}
-
-	ok := authenticate(req, htpasswdFile)
+	c := getConfigForRequest(req)
+	ok := authenticate(req, c.HtpasswdFile)
 	if !ok {
 		err.StatusCode = http.StatusUnauthorized
 		err.Err = errors.New("Unauthorized")
@@ -166,14 +157,14 @@ func checkUploadRequest(
 		return nil, err
 	}
 
-	if !strings.HasPrefix(req.Header.Get("Content-Type"), UPLOADCONTENTTYPE) {
-		msg := "Bad request. Use Content-Type: " + UPLOADCONTENTTYPE
+	if !strings.HasPrefix(req.Header.Get("Content-Type"), UPLOAD_CONTENT_TYPE) {
+		msg := "Bad request. Use Content-Type: " + UPLOAD_CONTENT_TYPE
 		err.StatusCode = http.StatusBadRequest
 		err.Err = errors.New(msg)
 		return nil, err
 	}
 
-	req.Body = http.MaxBytesReader(w, req.Body, maxUpload)
+	req.Body = http.MaxBytesReader(w, req.Body, c.MaxUploadSize)
 	reader, mperr := req.MultipartReader()
 	if mperr != nil {
 		// notest
@@ -192,7 +183,8 @@ func recieveFile(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, string(err.Error()), e.StatusCode)
 		return
 	}
-	fname, err := writeFile(rootDir, reader, false)
+	c := getConfigForRequest(req)
+	fname, err := writeFile(c.RootDir, reader, false)
 	if err != nil && err != io.EOF {
 		// notest
 		log.Printf("ERROR: %s\n", err.Error())
@@ -210,15 +202,15 @@ func recieveAndExtract(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, string(err.Error()), e.StatusCode)
 		return
 	}
-
-	fname, err := writeFile(rootDir, reader, true)
+	c := getConfigForRequest(req)
+	fname, err := writeFile(c.RootDir, reader, true)
 	if err != nil && err != io.EOF {
 		// notest
 		log.Printf("ERROR: %s\n", err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	fpath := filepath.Join(rootDir, fname)
+	fpath := filepath.Join(c.RootDir, fname)
 
 	defer os.RemoveAll(fpath)
 	file, err := os.Open(fpath)
@@ -230,7 +222,7 @@ func recieveAndExtract(w http.ResponseWriter, req *http.Request) {
 	}
 	defer file.Close()
 
-	files, err := extractFiles(file, rootDir)
+	files, err := extractFiles(file, c.RootDir)
 	if err != nil {
 		// notest
 		log.Printf("ERROR: %s\n", err.Error())
@@ -250,12 +242,12 @@ func showFile(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
+	c := getConfigForRequest(req)
 	fpath := req.URL.Path
-	if strings.HasSuffix(fpath, "/") && defaultToIndex {
+	if strings.HasSuffix(fpath, "/") && c.DefaultToIndex {
 		fpath += indexFile
 	}
-	path := rootDir + fpath
+	path := c.RootDir + fpath
 	http.ServeFile(w, req, path)
 }
 
@@ -284,20 +276,31 @@ func getIp(req *http.Request) string {
 }
 
 // for tests
-type startServerFn func(server *http.Server)
+type startServerFn func(server *http.Server, use_ssl bool)
 
 var startServerTestFn startServerFn = nil
 
-func getStartServerFn(s HTTPServer) startServerFn {
+func getStartServerFn(s TupiServer) startServerFn {
 	// notest
 	if startServerTestFn != nil {
 		return startServerTestFn
 	}
-	startServer := func(server *http.Server) {
-		if s.Conf.HasCert() && s.Conf.HasKey() {
-			server.ListenAndServeTLS(s.Conf.CertFilePath, s.Conf.KeyFilePath)
+	startServer := func(server *http.Server, use_ssl bool) {
+		if use_ssl {
+			if server.TLSConfig == nil {
+				server.TLSConfig = &tls.Config{}
+			}
+			tls_conf := server.TLSConfig
+			tls_conf.GetCertificate = getCertificate
+			err := server.ListenAndServeTLS("", "")
+			if err != nil {
+				panic(err.Error())
+			}
 		} else {
-			server.ListenAndServe()
+			err := server.ListenAndServe()
+			if err != nil {
+				panic(err.Error())
+			}
 		}
 
 	}

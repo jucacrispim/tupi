@@ -31,7 +31,7 @@ import (
 	"strings"
 )
 
-var chunkSize int64 = maxFileMemory
+var chunkSize int64 = 10 << 20
 
 func genRandFname(fname string) (string, error) {
 	b := make([]byte, 8)

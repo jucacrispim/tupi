@@ -24,7 +24,6 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 )
 
 func main() {
@@ -32,16 +31,11 @@ func main() {
 	if err != nil {
 		panic("Bad config " + err.Error())
 	}
-	has_cert := conf.HasCert()
-	has_key := conf.HasKey()
-
-	if (has_cert || has_key) && !(has_cert && has_key) {
-		panic("To use HTTPS you must pass certfile and keyfile")
+	if err := conf.Validate(); err != nil {
+		panic("Invalid configuration! " + err.Error())
 	}
 
-	ports := strconv.FormatInt(int64(conf.Port), 10)
-	host := fmt.Sprintf("%s:%s", conf.Host, ports)
-	fmt.Println("Tupi is serving at " + host)
+	fmt.Println("Tupi is running! ")
 
 	server := SetupServer(conf)
 	server.Run()

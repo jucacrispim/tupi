@@ -1,0 +1,6 @@
+[default]
+host = "2.2.2.2"
+[domain]
+host = "3.3.3.3"
+[other.domain]
+host = "4.4.4.4"

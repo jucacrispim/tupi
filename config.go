@@ -18,15 +18,17 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 )
 
-// Config values known to tupi
-type Config struct {
+// DomainConfig values known to tupi
+type DomainConfig struct {
 	Host           string
 	Port           int
 	RootDir        string
@@ -41,22 +43,44 @@ type Config struct {
 	ConfigFile     string
 }
 
-func (c Config) HasCert() bool {
+func (c *DomainConfig) HasCert() bool {
 	return c.CertFilePath != ""
 }
 
-func (c Config) HasKey() bool {
+func (c *DomainConfig) HasKey() bool {
 	return c.KeyFilePath != ""
 }
 
-func (c Config) IsValid() bool {
+func (c *DomainConfig) Validate() error {
 	has_cert := c.HasCert()
 	has_key := c.HasKey()
 
 	if (has_cert || has_key) && !(has_cert && has_key) {
-		return false
+		return errors.New("You must pass certfile and certkey to use ssl")
 	}
-	return true
+	return nil
+}
+
+type Config struct {
+	Domains map[string]DomainConfig
+}
+
+func (c *Config) Validate() error {
+	for _, v := range c.Domains {
+		if err := v.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Config) HasSSL() bool {
+	for _, v := range c.Domains {
+		if v.HasCert() && v.HasKey() {
+			return true
+		}
+	}
+	return false
 }
 
 // GetConfig returns the config struct for the server by reading
@@ -66,7 +90,10 @@ func GetConfig() (Config, error) {
 	cmdConf := GetConfigFromCommandLine()
 	envfile := os.Getenv("TUPI_CONFIG_FILE")
 	if cmdConf.ConfigFile == "" && envfile == "" {
-		return cmdConf, nil
+		c := Config{}
+		c.Domains = make(map[string]DomainConfig, 0)
+		c.Domains["default"] = cmdConf
+		return c, nil
 	}
 	// cmd line conffile has precedence over envvar config file
 	cfg := ""
@@ -79,11 +106,20 @@ func GetConfig() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	conf := mergeConfs(fileConf, cmdConf)
-	return conf, nil
+	defaultConf := fileConf.Domains["default"]
+	defaultConf = mergeConfs(defaultConf, cmdConf)
+	fileConf.Domains["default"] = defaultConf
+	for k, v := range fileConf.Domains {
+		if k == "default" {
+			continue
+		}
+		conf := mergeConfs(v, defaultConf)
+		fileConf.Domains[k] = conf
+	}
+	return fileConf, nil
 }
 
-func GetConfigFromCommandLine() Config {
+func GetConfigFromCommandLine() DomainConfig {
 	host := flag.String("host", "0.0.0.0", "host to listen.")
 	port := flag.Int("port", 8080, "port to listen.")
 	rdir := flag.String("root", ".", "The directory to serve files from")
@@ -105,7 +141,7 @@ func GetConfigFromCommandLine() Config {
 
 	args := getCmdlineArgs()
 	flag.CommandLine.Parse(args)
-	conf := Config{
+	conf := DomainConfig{
 		Host:           *host,
 		Port:           *port,
 		RootDir:        *rdir,
@@ -128,16 +164,22 @@ func GetConfigFromFile(fpath string) (Config, error) {
 		return Config{}, error
 	}
 	rawConf := string(bytes)
-	var conf Config
-	_, err := toml.Decode(rawConf, &conf)
-	if err != nil {
-		return Config{}, err
+	c := Config{}
+	c.Domains = make(map[string]DomainConfig)
+	confs := getDomainRawConfs(rawConf)
+	for domain, raw := range confs {
+		conf := DomainConfig{}
+		_, err := toml.Decode(raw, &conf)
+		if err != nil {
+			return Config{}, err
+		}
+		c.Domains[domain] = conf
 	}
-	return conf, nil
+	return c, nil
 }
 
 // merge two confs together. confA has precedence over confB
-func mergeConfs(confA Config, confB Config) Config {
+func mergeConfs(confA DomainConfig, confB DomainConfig) DomainConfig {
 	valA := reflect.ValueOf(confA)
 	valB := reflect.ValueOf(&confB).Elem()
 	for i := 0; i < valA.NumField(); i++ {
@@ -150,6 +192,25 @@ func mergeConfs(confA Config, confB Config) Config {
 		}
 	}
 	return confB
+}
+
+func getDomainRawConfs(rawConf string) map[string]string {
+	confs := make(map[string]string, 0)
+	conf := ""
+	domain := "default"
+	for _, line := range strings.Split(rawConf, "\n") {
+		if strings.HasPrefix(line, "[") {
+			if conf != "" {
+				confs[domain] = conf
+				conf = ""
+			}
+			domain = strings.Trim(line, "[]")
+		} else {
+			conf += line + "\n"
+		}
+	}
+	confs[domain] = conf
+	return confs
 }
 
 // help tests

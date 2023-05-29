@@ -39,7 +39,7 @@ func TestShowFile(t *testing.T) {
 		{"/", "GET", 200},
 		{"/../server.go", "GET", 400},
 	}
-	conf := Config{
+	dconf := DomainConfig{
 		Host:           "0.0.0.0",
 		Port:           8000,
 		RootDir:        "./testdata",
@@ -50,6 +50,9 @@ func TestShowFile(t *testing.T) {
 		MaxUploadSize:  10 << 20,
 		DefaultToIndex: true,
 	}
+	conf := Config{}
+	conf.Domains = make(map[string]DomainConfig)
+	conf.Domains["default"] = dconf
 	server := SetupServer(conf)
 	for _, test := range tests {
 		req, _ := http.NewRequest(test.method, test.path, nil)
@@ -93,17 +96,17 @@ func TestRecieveFile(t *testing.T) {
 		user   string
 		passwd string
 	}{
-		{"PUT", UPLOADCONTENTTYPE, 405, "test", "123"},
+		{"PUT", UPLOAD_CONTENT_TYPE, 405, "test", "123"},
 		{"POST", "application/json", 400, "test", "123"},
-		{"POST", UPLOADCONTENTTYPE, 401, "test", "456"},
-		{"POST", UPLOADCONTENTTYPE, 201, "test", "123"},
+		{"POST", UPLOAD_CONTENT_TYPE, 401, "test", "456"},
+		{"POST", UPLOAD_CONTENT_TYPE, 201, "test", "123"},
 	}
 
 	rdir := "/tmp/tupitest"
 	os.MkdirAll(rdir, 0755)
 	defer os.RemoveAll(rdir)
 
-	conf := Config{
+	dconf := DomainConfig{
 		Host:           "0.0.0.0",
 		Port:           8000,
 		RootDir:        rdir,
@@ -114,6 +117,9 @@ func TestRecieveFile(t *testing.T) {
 		MaxUploadSize:  10 << 20,
 		DefaultToIndex: true,
 	}
+	conf := Config{}
+	conf.Domains = make(map[string]DomainConfig)
+	conf.Domains["default"] = dconf
 	server := SetupServer(conf)
 	pr, boundary, err := createMultipartPipeReader("file.txt", []byte("test"))
 	if err != nil {
@@ -142,8 +148,8 @@ func TestRecieveAndExtract(t *testing.T) {
 		user   string
 		passwd string
 	}{
-		{"POST", UPLOADCONTENTTYPE, 201, "test", "123"},
-		{"GET", UPLOADCONTENTTYPE, 405, "test", "123"},
+		{"POST", UPLOAD_CONTENT_TYPE, 201, "test", "123"},
+		{"GET", UPLOAD_CONTENT_TYPE, 405, "test", "123"},
 	}
 
 	rdir := "/tmp/tupitest"
@@ -156,9 +162,11 @@ func TestRecieveAndExtract(t *testing.T) {
 		t.Errorf("error creating reader")
 	}
 
-	conf := Config{
-		Host:           "0.0.0.0",
-		Port:           8000,
+	dconf := DomainConfig{
+		Host: "0.0.0.0",
+		Port: 8000,
+	}
+	vconf := DomainConfig{
 		RootDir:        rdir,
 		Timeout:        300,
 		HtpasswdFile:   fpath,
@@ -167,10 +175,15 @@ func TestRecieveAndExtract(t *testing.T) {
 		MaxUploadSize:  10 << 20,
 		DefaultToIndex: true,
 	}
+	conf := Config{}
+	conf.Domains = make(map[string]DomainConfig)
+	conf.Domains["default"] = dconf
+	conf.Domains["localhost"] = vconf
 	server := SetupServer(conf)
 	for _, test := range tests {
 
 		req, _ := http.NewRequest(test.method, "/e/", pr)
+		req.Host = "localhost"
 		req.SetBasicAuth(test.user, test.passwd)
 		req.Header.Set("Content-Type", test.ctype+"; boundary="+boundary)
 		w := httptest.NewRecorder()
@@ -189,13 +202,16 @@ func TestRecieveAndExtract(t *testing.T) {
 
 func TestHTTPServer_RunOneServer(t *testing.T) {
 	called := false
-	startServerTestFn = func(s *http.Server) {
+	startServerTestFn = func(s *http.Server, use_ssl bool) {
 		called = true
 	}
 	defer func() {
 		startServerTestFn = nil
 	}()
+	dconf := DomainConfig{}
 	conf := Config{}
+	conf.Domains = make(map[string]DomainConfig)
+	conf.Domains["default"] = dconf
 	s := SetupServer(conf)
 	s.Run()
 
@@ -206,13 +222,16 @@ func TestHTTPServer_RunOneServer(t *testing.T) {
 
 func TestHTTPServer_RunMultipleServers(t *testing.T) {
 	called := false
-	startServerTestFn = func(s *http.Server) {
+	startServerTestFn = func(s *http.Server, use_ssl bool) {
 		called = true
 	}
 	defer func() {
 		startServerTestFn = nil
 	}()
+	dconf := DomainConfig{}
 	conf := Config{}
+	conf.Domains = make(map[string]DomainConfig)
+	conf.Domains["default"] = dconf
 	s := SetupServer(conf)
 	s.Servers = append(s.Servers, s.Servers[0])
 	s.Run()
