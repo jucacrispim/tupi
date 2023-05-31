@@ -24,10 +24,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 )
 
-func TestShowFile(t *testing.T) {
+func TestShowFile_SingleFile(t *testing.T) {
 	var tests = []struct {
 		path   string
 		method string
@@ -39,6 +41,7 @@ func TestShowFile(t *testing.T) {
 		{"/file.txt", "POST", 405},
 		{"/", "GET", 200},
 		{"/../server.go", "GET", 400},
+		{"/.../file.txt", "GET", 404},
 	}
 	dconf := DomainConfig{
 		Host:           "0.0.0.0",
@@ -62,6 +65,62 @@ func TestShowFile(t *testing.T) {
 		status := w.Code
 		if status != test.status {
 			t.Errorf("got %d, expected %d", status, test.status)
+		}
+	}
+}
+
+func TestShowFile_ListDir(t *testing.T) {
+	var tests = []struct {
+		path    string
+		method  string
+		status  int
+		checkFn func(*httptest.ResponseRecorder)
+		headers map[string]string
+	}{
+		{"/", "GET", 200, func(r *httptest.ResponseRecorder) {
+			body := string(r.Body.Bytes())
+			if strings.Index(body, "index.html") < 0 {
+				t.Fatalf("No index.html on list dir")
+			}
+		}, nil},
+		{"", "GET", 301, nil, nil},
+		{"/", "GET", 304, nil,
+			map[string]string{"If-Modified-Since": time.Now().Add(time.Hour * 3).Format(http.TimeFormat)}},
+		{"/", "GET", 200, nil,
+			map[string]string{"If-Modified-Since": time.Time{}.Format(http.TimeFormat)}},
+		{"/", "GET", 200, nil,
+			map[string]string{"If-Modified-Since": "xx"}},
+	}
+	dconf := DomainConfig{
+		Host:           "0.0.0.0",
+		Port:           8000,
+		RootDir:        "./testdata",
+		Timeout:        300,
+		HtpasswdFile:   "",
+		UploadPath:     "/u/",
+		ExtractPath:    "/e/",
+		MaxUploadSize:  10 << 20,
+		DefaultToIndex: false,
+	}
+	conf := Config{}
+	conf.Domains = make(map[string]DomainConfig)
+	conf.Domains["default"] = dconf
+	server := SetupServer(conf)
+	for _, test := range tests {
+		req, _ := http.NewRequest(test.method, test.path, nil)
+		if test.headers != nil {
+			for k, v := range test.headers {
+				req.Header.Set(k, v)
+			}
+		}
+		w := httptest.NewRecorder()
+		server.Servers[0].Handler.ServeHTTP(w, req)
+		status := w.Code
+		if status != test.status {
+			t.Errorf("got %d, expected %d", status, test.status)
+		}
+		if test.checkFn != nil {
+			test.checkFn(w)
 		}
 	}
 }
@@ -195,8 +254,27 @@ func TestRecieveAndExtract(t *testing.T) {
 		}
 	}
 
+	// the directory should be ok
 	_, err = os.Stat(filepath.Join(rdir, "bla"))
 	if err != nil {
+		t.Errorf("Error extracting file: %s", err)
+	}
+
+	// a normal file should be ok
+	_, err = os.Stat(filepath.Join(rdir, "bla", "one.txt"))
+	if err != nil {
+		t.Errorf("Error extracting file: %s", err)
+	}
+
+	// a link to a file inside the root dir should be ok
+	_, err = os.Stat(filepath.Join(rdir, "bla", "ble", "four.txt"))
+	if err != nil {
+		t.Errorf("Error extracting file: %s", err)
+	}
+
+	// a link to a file outside the root dir should not be ok
+	_, err = os.Stat(filepath.Join(rdir, "bla", "ble", "bad.txt"))
+	if err == nil {
 		t.Errorf("Error extracting file: %s", err)
 	}
 }

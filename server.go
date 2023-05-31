@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -187,7 +186,7 @@ func recieveFile(w http.ResponseWriter, req *http.Request) {
 	fname, err := writeFile(c.RootDir, reader, false)
 	if err != nil && err != io.EOF {
 		// notest
-		log.Printf("ERROR: %s\n", err.Error())
+		Errorf("%s\n", err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -206,7 +205,7 @@ func recieveAndExtract(w http.ResponseWriter, req *http.Request) {
 	fname, err := writeFile(c.RootDir, reader, true)
 	if err != nil && err != io.EOF {
 		// notest
-		log.Printf("ERROR: %s\n", err.Error())
+		Errorf("%s\n", err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -216,7 +215,7 @@ func recieveAndExtract(w http.ResponseWriter, req *http.Request) {
 	file, err := os.Open(fpath)
 	if err != nil {
 		// notest
-		log.Printf("ERROR: %s\n", err.Error())
+		Errorf("%s\n", err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -225,7 +224,7 @@ func recieveAndExtract(w http.ResponseWriter, req *http.Request) {
 	files, err := extractFiles(file, c.RootDir)
 	if err != nil {
 		// notest
-		log.Printf("ERROR: %s\n", err.Error())
+		Errorf("%s\n", err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -242,13 +241,32 @@ func showFile(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	if containsDotDot(req.URL.Path) {
+		http.Error(w, "invalid URL path", http.StatusBadRequest)
+		return
+	}
 	c := getConfigForRequest(req)
 	fpath := req.URL.Path
 	if strings.HasSuffix(fpath, "/") && c.DefaultToIndex {
 		fpath += indexFile
 	}
 	path := c.RootDir + fpath
-	http.ServeFile(w, req, path)
+	dir, file := filepath.Split(path)
+	serveFile(w, req, http.Dir(dir), file)
+}
+
+func isSlashRune(r rune) bool { return r == '/' || r == '\\' }
+
+func containsDotDot(v string) bool {
+	if !strings.Contains(v, "..") {
+		return false
+	}
+	for _, ent := range strings.FieldsFunc(v, isSlashRune) {
+		if ent == ".." {
+			return true
+		}
+	}
+	return false
 }
 
 func logRequest(h http.Handler) http.Handler {
@@ -259,7 +277,7 @@ func logRequest(h http.Handler) http.Handler {
 		path := req.URL.Path
 		method := req.Method
 		ua := req.Header.Get("User-Agent")
-		log.Printf("%s %s %s %d %s\n", remote, method, path, sw.status, ua)
+		Infof("%s %s %s %d %s\n", remote, method, path, sw.status, ua)
 	}
 	return http.HandlerFunc(handler)
 }
