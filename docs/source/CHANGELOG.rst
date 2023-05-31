@@ -1,6 +1,11 @@
 Changelog
 =========
 
+* v0.4.0
+
+  - Add support for virtual domains
+  - Fix default to index
+
 * v0.3.0
 
   - Add support for toml config file

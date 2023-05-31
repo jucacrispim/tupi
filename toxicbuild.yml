@@ -23,3 +23,6 @@ steps:
 
   - name: build docs
     command: make docs
+
+  - name: upload docs
+    command: ./build-scripts/upload_docs.sh

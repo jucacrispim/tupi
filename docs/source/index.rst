@@ -202,6 +202,48 @@ Here is an example of a config file:
     defaultToIndex = true
 
 
+Virtual Domains
++++++++++++++++
+
+To use virutal domains one need to configure the domains in the config file. Each
+different section of the config file corresponds to a virtual domain handled by tupi.
+
+.. code-block:: toml
+
+   [default]
+   port 8080
+
+   [adomain.net]
+   rootDir "/some/dir"
+   # timeout in seconds
+   timeout = 500
+   htpasswdFile = "/some/htpasswd"
+   uploadPath = "/u/"
+   extractPath = "/e/"
+   # defaults to 10 MB
+   maxUploadSize = 10485760
+   certFilePath = "/some/cert.pem"
+   keyFilePath = "/some/file.key"
+   defaultToIndex = true
+
+
+   [otherdomain.net]
+   rootDir "/other/dir"
+   # timeout in seconds
+   timeout = 500
+   htpasswdFile = "/other/htpasswd"
+   uploadPath = "/u/"
+   extractPath = "/e/"
+   # defaults to 10 MB
+   maxUploadSize = 10485760
+   certFilePath = "/other/cert.pem"
+   keyFilePath = "/other/file.key"
+   defaultToIndex = false
+
+
+All options available ara supported by the virtual domains, except ``host`` and ``port``
+that are only available for the default server.
+
 .. toctree::
    :maxdepth: 1
 
