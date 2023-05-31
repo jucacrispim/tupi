@@ -24,10 +24,12 @@ package main
 
 import (
 	"fmt"
+
+	"github.com/jucacrispim/tupi"
 )
 
 func main() {
-	conf, err := GetConfig()
+	conf, err := tupi.GetConfig()
 	if err != nil {
 		panic("Bad config " + err.Error())
 	}
@@ -37,6 +39,6 @@ func main() {
 
 	fmt.Println("Tupi is running! ")
 
-	server := SetupServer(conf)
+	server := tupi.SetupServer(conf)
 	server.Run()
 }

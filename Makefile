@@ -6,11 +6,12 @@ BIN_NAME=tupi
 BUILD_DIR=build
 BIN_PATH=./$(BUILD_DIR)/$(BIN_NAME)
 OUTFLAG=-o $(BIN_PATH)
+CMDFILE=cmd/main.go
 
 
 .PHONY: build # - Create the binary under the build/ directory
 build:
-	$(GOBUILD) $(OUTFLAG)
+	$(GOBUILD) $(OUTFLAG) $(CMDFILE)
 
 .PHONY: test # - Run all tests
 test:
