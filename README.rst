@@ -170,3 +170,10 @@ Config file
 
 You can use a config file instead of command line options. Check the
 documentation `here <https://tupi.poraodojuca.dev/index.html#config-file>`_.
+
+
+Virtual domains
++++++++++++++++
+
+Tupi also supports the use of virutal domains. Check the virtual domains
+documantation `here <https://tupi.poraodojuca.dev/#virtual-domains>`_.
