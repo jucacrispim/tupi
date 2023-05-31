@@ -84,13 +84,20 @@ func SetupServer(conf Config) TupiServer {
 	return s
 }
 
+var certsCache map[string]tls.Certificate = make(map[string]tls.Certificate, 0)
+
+// Returns a certificate based on the host config.
 func getCertificate(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	domain := info.ServerName
+	if cert, exists := certsCache[domain]; exists {
+		return &cert, nil
+	}
 	conf, exists := config.Domains[domain]
 	if !exists {
 		conf = config.Domains["default"]
 	}
 	cert, err := tls.LoadX509KeyPair(conf.CertFilePath, conf.KeyFilePath)
+	certsCache[domain] = cert
 	return &cert, err
 }
 
