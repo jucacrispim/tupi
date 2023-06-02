@@ -123,7 +123,12 @@ func authenticate(r *http.Request, conf DomainConfig) bool {
 	return basicAuth(r, conf.HtpasswdFile)
 }
 
+var pluginsCache map[string]authFn = make(map[string]authFn)
+
 func loadAuthPlugin(pluginPath string) (authFn, error) {
+	if authFn, exists := pluginsCache[pluginPath]; exists {
+		return authFn, nil
+	}
 	p, err := plugin.Open(pluginPath)
 	if err != nil {
 		return nil, err
@@ -136,5 +141,6 @@ func loadAuthPlugin(pluginPath string) (authFn, error) {
 	if !ok {
 		return nil, errors.New("Invalid Authenticate symbol for plugin: " + pluginPath)
 	}
+	pluginsCache[pluginPath] = fn
 	return fn, nil
 }
