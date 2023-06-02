@@ -21,6 +21,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"plugin"
 	"strings"
 
 	auth "github.com/abbot/go-http-auth"
@@ -87,7 +88,7 @@ func userSecret(username string, fpath string) (string, error) {
 	return pwd, err
 }
 
-func authenticate(r *http.Request, fpath string) bool {
+func basicAuth(r *http.Request, fpath string) bool {
 
 	if fpath == "" {
 		return false
@@ -106,4 +107,34 @@ func authenticate(r *http.Request, fpath string) bool {
 	}
 
 	return ret
+}
+
+type authFn func(*http.Request, map[string]interface{}) bool
+
+func authenticate(r *http.Request, conf DomainConfig) bool {
+	if conf.AuthPlugin != "" {
+		p, err := loadAuthPlugin(conf.AuthPlugin)
+		if err != nil {
+			Infof("Error load plugin %s. Not authenticating. %s", conf.AuthPlugin, err.Error())
+			return false
+		}
+		return p(r, conf.AuthPluginConf)
+	}
+	return basicAuth(r, conf.HtpasswdFile)
+}
+
+func loadAuthPlugin(pluginPath string) (authFn, error) {
+	p, err := plugin.Open(pluginPath)
+	if err != nil {
+		return nil, err
+	}
+	s, err := p.Lookup("Authenticate")
+	if err != nil {
+		return nil, err
+	}
+	fn, ok := s.(func(*http.Request, map[string]interface{}) bool)
+	if !ok {
+		return nil, errors.New("Invalid Authenticate symbol for plugin: " + pluginPath)
+	}
+	return fn, nil
 }

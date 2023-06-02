@@ -21,12 +21,17 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"testing"
 )
 
 func TestMain(m *testing.M) {
 	log.SetOutput(ioutil.Discard)
 	os.Chmod("./testdata/impossible.txt", 0000)
+	exec.Command("make", "buildtest")
+	defer func() {
+		exec.Command("make", "clean")
+	}()
 	status := m.Run()
 	os.Chmod("./testdata/impossible.txt", 0644)
 	os.Exit(status)

@@ -1,4 +1,4 @@
-// Copyright 2020 Juca Crispim <juca@poraodojuca.net>
+// Copyright 2020, 2023 Juca Crispim <juca@poraodojuca.net>
 
 // This file is part of tupi.
 
@@ -72,7 +72,7 @@ func TestUserSecret(t *testing.T) {
 	}
 }
 
-func TestAuthenticate(t *testing.T) {
+func TestAuthenticate_BasicAuth(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/u/", nil)
 	fpath := "./testdata/htpasswd"
 	var tests = []struct {
@@ -86,13 +86,41 @@ func TestAuthenticate(t *testing.T) {
 		{"missing", "123", false, fpath},
 		{"fpath", "123", false, ""},
 	}
-
 	for _, test := range tests {
+		conf := DomainConfig{}
+		conf.HtpasswdFile = test.fpath
+
 		req.SetBasicAuth(test.user, test.password)
-		r := authenticate(req, test.fpath)
+		r := authenticate(req, conf)
 
 		if r != test.ok {
 			t.Errorf("error in %s %s: %t", test.user, test.password, r)
+		}
+	}
+}
+
+func TestAuthenticate_Plugin(t *testing.T) {
+	req, _ := http.NewRequest("GET", "/u/", nil)
+	fpath := "./build/auth_plugin.so"
+	fpath_bad := "./build/auth_plugin_bad.so"
+	var tests = []struct {
+		host  string
+		ok    bool
+		fpath string
+	}{
+		{"test.localhost", true, fpath},
+		{"bla", false, fpath},
+		{"bla", false, "error.so"},
+		{"bla", false, fpath_bad},
+	}
+	for _, test := range tests {
+		conf := DomainConfig{}
+		conf.AuthPlugin = test.fpath
+		req.Host = test.host
+		r := authenticate(req, conf)
+
+		if r != test.ok {
+			t.Errorf("error in %s: %t", test.host, r)
 		}
 	}
 }

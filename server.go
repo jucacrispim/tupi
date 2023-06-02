@@ -101,12 +101,12 @@ func getCertificate(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	return &cert, err
 }
 
-type StatusedResponseWriter struct {
+type statusedResponseWriter struct {
 	http.ResponseWriter
 	status int
 }
 
-func (w *StatusedResponseWriter) WriteHeader(code int) {
+func (w *statusedResponseWriter) WriteHeader(code int) {
 	w.status = code
 	w.ResponseWriter.WriteHeader(code)
 }
@@ -150,7 +150,7 @@ func checkUploadRequest(
 	w http.ResponseWriter, req *http.Request) (*multipart.Reader, error) {
 	err := &requestError{}
 	c := getConfigForRequest(req)
-	ok := authenticate(req, c.HtpasswdFile)
+	ok := authenticate(req, c)
 	if !ok {
 		err.StatusCode = http.StatusUnauthorized
 		err.Err = errors.New("Unauthorized")
@@ -278,7 +278,7 @@ func containsDotDot(v string) bool {
 
 func logRequest(h http.Handler) http.Handler {
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		sw := &StatusedResponseWriter{w, http.StatusOK}
+		sw := &statusedResponseWriter{w, http.StatusOK}
 		h.ServeHTTP(sw, req)
 		remote := getIp(req)
 		path := req.URL.Path

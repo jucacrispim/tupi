@@ -41,6 +41,8 @@ type DomainConfig struct {
 	KeyFilePath    string
 	DefaultToIndex bool
 	ConfigFile     string
+	AuthPlugin     string
+	AuthPluginConf map[string]interface{}
 }
 
 func (c *DomainConfig) HasCert() bool {
@@ -138,6 +140,7 @@ func GetConfigFromCommandLine() DomainConfig {
 		false,
 		"Returns the index.html instead of listing a directory")
 	conf_path := flag.String("conf", "", "Path for the configuration file")
+	auth_plugin := flag.String("auth", "", "Path for the auth plugin")
 
 	args := getCmdlineArgs()
 	flag.CommandLine.Parse(args)
@@ -154,6 +157,7 @@ func GetConfigFromCommandLine() DomainConfig {
 		KeyFilePath:    *keyfile,
 		DefaultToIndex: *defaultToIndex,
 		ConfigFile:     *conf_path,
+		AuthPlugin:     *auth_plugin,
 	}
 	return conf
 }

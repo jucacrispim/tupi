@@ -1,21 +1,39 @@
 GOCMD=go
-GOBUILD=$(GOCMD) build
+GOBUILD=$(GOCMD) build -trimpath
 GOCLEAN=$(GOCMD) clean
-GOTEST=$(GOCMD) test
+GOTEST=$(GOCMD) test -v ./... -trimpath
 BIN_NAME=tupi
 BUILD_DIR=build
 BIN_PATH=./$(BUILD_DIR)/$(BIN_NAME)
 OUTFLAG=-o $(BIN_PATH)
 CMDFILE=cmd/main.go
+TESTDATA_DIR=testdata
+PLUGIN_MODE_FLAG=-buildmode=plugin
+AUTH_PLUGIN_BIN_NAME=auth_plugin.so
+BAD_AUTH_PLUGIN_BIN_NAME=auth_plugin_bad.so
+AUTH_PLUGIN_BIN_PATH=./$(BUILD_DIR)/$(AUTH_PLUGIN_BIN_NAME)
+BAD_AUTH_PLUGIN_BIN_PATH=./$(BUILD_DIR)/$(BAD_AUTH_PLUGIN_BIN_NAME)
+AUTH_PLUGIN_OUTFLAG=-o $(AUTH_PLUGIN_BIN_PATH)
+BAD_AUTH_PLUGIN_OUTFLAG=-o $(BAD_AUTH_PLUGIN_BIN_PATH)
+AUTH_PLUGIN_FILE=$(TESTDATA_DIR)/auth_plugin.go
+BAD_AUTH_PLUGIN_FILE=$(TESTDATA_DIR)/auth_plugin_bad.go
 
 
-.PHONY: build # - Create the binary under the build/ directory
+
+.PHONY: build # - Creates the binary under the build/ directory
 build:
 	$(GOBUILD) $(OUTFLAG) $(CMDFILE)
 
+.PHONY: buildtest # - Creates the binary for the test plugins under the build/ directory
+buildtest:
+	$(GOBUILD) $(AUTH_PLUGIN_OUTFLAG) $(PLUGIN_MODE_FLAG) $(AUTH_PLUGIN_FILE)
+	$(GOBUILD) $(BAD_AUTH_PLUGIN_OUTFLAG) $(PLUGIN_MODE_FLAG) $(BAD_AUTH_PLUGIN_FILE)
+	cd -
+
 .PHONY: test # - Run all tests
 test:
-	go test -v ./...
+	$(GOBUILD)
+	$(GOTEST)
 
 .PHONY: setupenv # - Install needed tools for tests/docs
 setupenv:
@@ -26,9 +44,10 @@ docs:
 	./build-scripts/env.sh build-docs
 
 .PHONY: cov # - Run all tests and check coverage
-cov:
-	./build-scripts/check_coverage.sh
+cov: buildtest coverage clean
 
+coverage:
+	./build-scripts/check_coverage.sh
 
 .PHONY: run # - Run the program. You can use `make run ARGS="-host :9090 -root=/"`
 run:
