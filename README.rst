@@ -177,3 +177,9 @@ Virtual domains
 
 Tupi also supports the use of virutal domains. Check the virtual domains
 documantation `here <https://tupi.poraodojuca.dev/#virtual-domains>`_.
+
+Plugins
+-------
+
+Tupi can be exteded by plugins. Check the ``documentation <https://tupi.poraodojuca.dev/plugins.html>`_
+on how to write plugins for tupi

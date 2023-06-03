@@ -1,9 +1,3 @@
-.. araponga documentation master file, created by
-   sphinx-quickstart on Wed Aug 31 22:58:53 2022.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-
 Tupi: A simple web server
 =========================
 
@@ -14,7 +8,7 @@ basic http auth for file uploads.
 Install
 -------
 
-Tupi is writter in go, so you need a go compiler installed. Then, clone the code:
+Tupi is written in go, so you need a go compiler installed. Then, clone the code:
 
 .. code-block:: sh
 
@@ -175,6 +169,9 @@ For all options available for tupi use the command ``tupi -h``
      -upath string
 	   Path to upload files (default "/u/")
 
+
+.. _config-file:
+
 Config file
 +++++++++++
 
@@ -201,6 +198,7 @@ Here is an example of a config file:
     keyFilePath = "/some/file.key"
     defaultToIndex = true
 
+.. _virtual-domains:
 
 Virtual Domains
 +++++++++++++++
@@ -243,6 +241,18 @@ different section of the config file corresponds to a virtual domain handled by 
 
 All options available ara supported by the virtual domains, except ``host`` and ``port``
 that are only available for the default server.
+
+
+Plugins
+-------
+
+Tupi can be extended by plugins. Check the docs on how to write your own
+plugins
+
+.. toctree::
+   :maxdepth: 1
+
+   plugins
 
 .. toctree::
    :maxdepth: 1
