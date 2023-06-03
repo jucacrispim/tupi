@@ -112,24 +112,24 @@ func basicAuth(r *http.Request, fpath string) bool {
 type authFn func(*http.Request, map[string]interface{}) bool
 
 func authenticate(r *http.Request, conf DomainConfig) bool {
-	if conf.AuthPlugin != "" {
-		p, err := loadAuthPlugin(conf.AuthPlugin)
-		if err != nil {
-			Errorf(
-				"Error loading plugin %s. Not authenticating. %s",
-				conf.AuthPlugin, err.Error())
-			return false
-		}
-		ok := false
-		defer func() {
-			if err := recover(); err != nil {
-				Errorf("Error authenticating with %s", conf.AuthPlugin)
-			}
-		}()
-		ok = p(r, conf.AuthPluginConf)
-		return ok
+	if conf.AuthPlugin == "" {
+		return basicAuth(r, conf.HtpasswdFile)
 	}
-	return basicAuth(r, conf.HtpasswdFile)
+	p, err := loadAuthPlugin(conf.AuthPlugin)
+	if err != nil {
+		Errorf(
+			"Error loading plugin %s. Not authenticating. %s",
+			conf.AuthPlugin, err.Error())
+		return false
+	}
+	ok := false
+	defer func() {
+		if err := recover(); err != nil {
+			Errorf("Error authenticating with %s", conf.AuthPlugin)
+		}
+	}()
+	ok = p(r, conf.AuthPluginConf)
+	return ok
 }
 
 var pluginsCache map[string]authFn = make(map[string]authFn)

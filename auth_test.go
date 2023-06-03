@@ -111,9 +111,9 @@ func TestAuthenticate_Plugin(t *testing.T) {
 	}{
 		{"test.localhost", true, fpath},
 		{"bla", false, fpath},
-		{"bla", false, "error.so"},
-		{"bla", false, fpath_bad},
-		{"bla", false, fpath_panic},
+		{"test.localhost", false, "error.so"},
+		{"test.localhost", false, fpath_bad},
+		{"test.localhost", false, fpath_panic},
 	}
 	for _, test := range tests {
 		conf := DomainConfig{}
