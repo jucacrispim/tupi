@@ -55,13 +55,13 @@ func Debugf(format string, v ...interface{}) {
 }
 
 func Infof(format string, v ...interface{}) {
-	if currentLogLevel >= LevelInfo {
+	if currentLogLevel <= LevelInfo {
 		infoLogger.Printf(format, v...)
 	}
 }
 
 func Errorf(format string, v ...interface{}) {
-	if currentLogLevel >= LevelError {
+	if currentLogLevel <= LevelError {
 		errorLogger.Printf(format, v...)
 	}
 }

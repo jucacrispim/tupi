@@ -103,6 +103,7 @@ func TestAuthenticate_Plugin(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/u/", nil)
 	fpath := "./build/auth_plugin.so"
 	fpath_bad := "./build/auth_plugin_bad.so"
+	fpath_panic := "./build/auth_plugin_panic.so"
 	var tests = []struct {
 		host  string
 		ok    bool
@@ -112,6 +113,7 @@ func TestAuthenticate_Plugin(t *testing.T) {
 		{"bla", false, fpath},
 		{"bla", false, "error.so"},
 		{"bla", false, fpath_bad},
+		{"bla", false, fpath_panic},
 	}
 	for _, test := range tests {
 		conf := DomainConfig{}

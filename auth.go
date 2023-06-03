@@ -115,10 +115,19 @@ func authenticate(r *http.Request, conf DomainConfig) bool {
 	if conf.AuthPlugin != "" {
 		p, err := loadAuthPlugin(conf.AuthPlugin)
 		if err != nil {
-			Infof("Error load plugin %s. Not authenticating. %s", conf.AuthPlugin, err.Error())
+			Errorf(
+				"Error loading plugin %s. Not authenticating. %s",
+				conf.AuthPlugin, err.Error())
 			return false
 		}
-		return p(r, conf.AuthPluginConf)
+		ok := false
+		defer func() {
+			if err := recover(); err != nil {
+				Errorf("Error authenticating with %s", conf.AuthPlugin)
+			}
+		}()
+		ok = p(r, conf.AuthPluginConf)
+		return ok
 	}
 	return basicAuth(r, conf.HtpasswdFile)
 }
