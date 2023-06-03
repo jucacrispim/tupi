@@ -138,6 +138,12 @@ func loadAuthPlugin(pluginPath string) (authFn, error) {
 	if authFn, exists := pluginsCache[pluginPath]; exists {
 		return authFn, nil
 	}
+	AcquireLock(pluginPath)
+	defer ReleaseLock(pluginPath)
+	if authFn, exists := pluginsCache[pluginPath]; exists {
+		// notest
+		return authFn, nil
+	}
 	p, err := plugin.Open(pluginPath)
 	if err != nil {
 		return nil, err

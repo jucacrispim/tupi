@@ -96,6 +96,13 @@ func getCertificate(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	if !exists {
 		conf = config.Domains["default"]
 	}
+	AcquireLock(domain)
+	defer ReleaseLock(domain)
+	// check if the cert was created while waiting for the lock
+	if cert, exists := certsCache[domain]; exists {
+		// notest
+		return &cert, nil
+	}
 	cert, err := tls.LoadX509KeyPair(conf.CertFilePath, conf.KeyFilePath)
 	certsCache[domain] = cert
 	return &cert, err
