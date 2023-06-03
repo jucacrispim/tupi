@@ -1,23 +1,55 @@
-// Copyright 2020, 2023 Juca Crispim <juca@poraodojuca.net>
-
-// This file is part of tupi.
-
-// tupi is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// tupi is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-
-// You should have received a copy of the GNU Affero General Public License
-// along with tupi. If not, see <http://www.gnu.org/licenses/>.
-
 //go:build !test
-// +build !test
 
+/*
+Tupi serves files within a directory and files can also be uploaded to a directory.
+
+Usage:
+
+	tupi [params]
+
+The params are:
+
+	 -certfile string
+		 Path for the tls certificate file
+
+	 -conf string
+		 Path for the configuration file
+
+	 -default-to-index
+		 Returns the index.html instead of listing a directory
+
+	 -epath string
+		 Path to extract files (default "/e/")
+
+	 -host string
+		 host to listen. (default "0.0.0.0")
+
+	 -htpasswd string
+		 Full path for a htpasswd file used for authentication
+
+	 -keyfile string
+		 Path for the tls key file
+
+	 -maxupload int
+		 Max size for uploaded files (default 10485760)
+
+	 -port int
+		 port to listen. (default 8080)
+
+	 -root string
+		 The directory to serve files from (default ".")
+
+	 -timeout int
+		 Timeout in seconds for read/write (default 240)
+
+	 -upath string
+		 Path to upload files (default "/u/")
+
+Only authenticated uploads are allowed. To upload a file one need to use
+an authentication method. Check the [online documentation] for details.
+
+[online documentation]: https://tupi.poraodojuca.dev
+*/
 package main
 
 // notest
