@@ -181,5 +181,5 @@ documantation `here <https://tupi.poraodojuca.dev/#virtual-domains>`_.
 Plugins
 -------
 
-Tupi can be exteded by plugins. Check the ``documentation <https://tupi.poraodojuca.dev/plugins.html>`_
+Tupi can be exteded by plugins. Check the `documentation <https://tupi.poraodojuca.dev/plugins.html>`_
 on how to write plugins for tupi
