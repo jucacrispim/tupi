@@ -1,4 +1,4 @@
-// Copyright 2020 Juca Crispim <juca@poraodojuca.net>
+// Copyright 2020, 2023 Juca Crispim <juca@poraodojuca.net>
 
 // This file is part of tupi.
 
@@ -21,7 +21,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
-	"plugin"
 	"strings"
 
 	auth "github.com/abbot/go-http-auth"
@@ -111,14 +110,14 @@ func basicAuth(r *http.Request, fpath string) bool {
 
 type authFn func(*http.Request, map[string]interface{}) bool
 
-func authenticate(r *http.Request, conf DomainConfig) bool {
+func authenticate(r *http.Request, conf *DomainConfig) bool {
 	if conf.AuthPlugin == "" {
 		return basicAuth(r, conf.HtpasswdFile)
 	}
-	p, err := loadAuthPlugin(conf.AuthPlugin)
+	p, err := GetAuthPlugin(conf.AuthPlugin)
 	if err != nil {
 		Errorf(
-			"Error loading plugin %s. Not authenticating. %s",
+			"Error gettting auth plugin %s. Not authenticating. %s",
 			conf.AuthPlugin, err.Error())
 		return false
 	}
@@ -128,34 +127,7 @@ func authenticate(r *http.Request, conf DomainConfig) bool {
 			Errorf("Error authenticating with %s", conf.AuthPlugin)
 		}
 	}()
-	ok = p(r, conf.AuthPluginConf)
+	domain := getDomainForRequest(r)
+	ok = p(r, domain, &conf.AuthPluginConf)
 	return ok
-}
-
-var pluginsCache map[string]authFn = make(map[string]authFn)
-
-func loadAuthPlugin(pluginPath string) (authFn, error) {
-	if authFn, exists := pluginsCache[pluginPath]; exists {
-		return authFn, nil
-	}
-	AcquireLock(pluginPath)
-	defer ReleaseLock(pluginPath)
-	if authFn, exists := pluginsCache[pluginPath]; exists {
-		// notest
-		return authFn, nil
-	}
-	p, err := plugin.Open(pluginPath)
-	if err != nil {
-		return nil, err
-	}
-	s, err := p.Lookup("Authenticate")
-	if err != nil {
-		return nil, err
-	}
-	fn, ok := s.(func(*http.Request, map[string]interface{}) bool)
-	if !ok {
-		return nil, errors.New("Invalid Authenticate symbol for plugin: " + pluginPath)
-	}
-	pluginsCache[pluginPath] = fn
-	return fn, nil
 }

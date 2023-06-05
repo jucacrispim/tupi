@@ -122,13 +122,18 @@ func setConfig(conf Config) {
 	config = conf
 }
 
-func getConfigForRequest(req *http.Request) DomainConfig {
+func getDomainForRequest(req *http.Request) string {
 	domain := strings.Split(req.Host, ":")[0]
 	domain = strings.ToLower(domain)
+	return domain
+}
+func getConfigForRequest(req *http.Request) *DomainConfig {
+	domain := getDomainForRequest(req)
 	if conf, exists := config.Domains[domain]; exists {
-		return conf
+		return &conf
 	}
-	return config.Domains["default"]
+	default_confg := config.Domains["default"]
+	return &default_confg
 }
 
 // route is responsible for calling the proper handler based in the
