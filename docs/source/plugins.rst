@@ -1,11 +1,26 @@
 Writing plugins
 ===============
 
-Tupi supports authentication plugins using the go's plugin interface. To create
-an authentication plugin you must implement a function named ``Authenticate`` that
-get two params: A reference to ``http.Request`` and a ``map[string]any`` that
-contains the specific configs for the plugin. The function must returns a
-bool indicating if the request was successfully authenticated or not.
+Tupi supports extention throught plugins using the go's plugin interface. Every plugin
+may have an OPTIONAL ``Init`` function for the plugins initialization. The ``Init``
+function gets a domain and a reference to a config map and returns an error
+
+.. code-block:: go
+
+   package main
+
+   func Init(domain string, conf *map[string]any) error {
+	// do something
+	return nil
+   }
+
+
+Authentication plugin
+---------------------
+
+To create an authentication plugin you must implement a function named ``Authenticate`` that
+get three params: A reference to ``http.Request``, a domain and a reference to a
+config map and returns a bool indicating if the authentication was successfull or not.
 
 .. code-block:: go
 
@@ -13,7 +28,7 @@ bool indicating if the request was successfully authenticated or not.
 
    import "net/http"
 
-   func Authenticate(r *http.Request, conf map[string]any) bool {
+   func Authenticate(r *http.Request, domain string, conf *map[string]any) bool {
 	   if r.Host == "test.localhost" {
 		   return true
 	   }

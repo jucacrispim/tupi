@@ -32,7 +32,7 @@ import (
 // func(string, map[string]any) error
 //
 // InitPlugin is intended to be run as part of the server start process.
-func InitPlugin(fpath string, domain string, conf map[string]any) (*plugin.Plugin, error) {
+func InitPlugin(fpath string, domain string, conf *map[string]any) (*plugin.Plugin, error) {
 	p, err := plugin.Open(fpath)
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func InitPlugin(fpath string, domain string, conf map[string]any) (*plugin.Plugi
 		return p, nil
 	}
 
-	fn, ok := s.(func(string, map[string]any) error)
+	fn, ok := s.(func(string, *map[string]any) error)
 	if !ok {
 		return nil, errors.New("Invalid Init symbol for plugin: " + fpath)
 	}
@@ -73,7 +73,7 @@ var authPluginsCache map[string]AuthFn = make(map[string]AuthFn)
 //	func(*http.Request, string, map[string]any)
 //
 // LoadAuthPlugin is intended to be run as part of the server start process.
-func LoadAuthPlugin(fpath string, domain string, conf map[string]any) error {
+func LoadAuthPlugin(fpath string, domain string, conf *map[string]any) error {
 	p, err := InitPlugin(fpath, domain, conf)
 	if err != nil {
 		return err
