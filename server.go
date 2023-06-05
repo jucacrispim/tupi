@@ -42,7 +42,18 @@ type TupiServer struct {
 	Servers []*http.Server
 }
 
-func (s TupiServer) Run() {
+func (s *TupiServer) LoadPlugins() {
+	for domain, conf := range s.Conf.Domains {
+		if conf.AuthPlugin != "" {
+			err := LoadAuthPlugin(conf.AuthPlugin, domain, &conf.AuthPluginConf)
+			if err != nil {
+				Errorf("Error loading plugin %s", err.Error())
+			}
+		}
+	}
+}
+
+func (s *TupiServer) Run() {
 	startServer := getStartServerFn(s)
 	use_ssl := s.Conf.HasSSL()
 	if len(s.Servers) == 1 {
@@ -81,6 +92,7 @@ func SetupServer(conf Config) TupiServer {
 	}
 	servers = append(servers, server)
 	s.Servers = servers
+	s.LoadPlugins()
 	return s
 }
 
@@ -317,7 +329,7 @@ type startServerFn func(server *http.Server, use_ssl bool)
 
 var startServerTestFn startServerFn = nil
 
-func getStartServerFn(s TupiServer) startServerFn {
+func getStartServerFn(s *TupiServer) startServerFn {
 	// notest
 	if startServerTestFn != nil {
 		return startServerTestFn

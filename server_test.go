@@ -363,3 +363,19 @@ func TestGetCertificate_VirtualDomain(t *testing.T) {
 		t.Fatalf("Bad certificate")
 	}
 }
+
+func TestTupiServer_LoadPlugins(t *testing.T) {
+	aconf := DomainConfig{}
+	aconf.AuthPlugin = "./build/auth_plugin.so"
+	otherconf := DomainConfig{}
+	otherconf.AuthPlugin = "./build/init_plugin_bad.so"
+	c := Config{}
+	c.Domains = make(map[string]DomainConfig)
+	c.Domains["default"] = aconf
+	c.Domains["other"] = otherconf
+	SetupServer(c)
+	_, err := GetAuthPlugin(aconf.AuthPlugin)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+}

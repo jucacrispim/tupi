@@ -1,6 +1,10 @@
 Changelog
 =========
 
+* v0.6.1
+
+  - Fix load plugins
+
 * v0.6.0
 
   - Refactor plugins to allow plugin initialization
