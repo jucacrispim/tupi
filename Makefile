@@ -6,7 +6,7 @@ BIN_NAME=tupi
 BUILD_DIR=build
 BIN_PATH=./$(BUILD_DIR)/$(BIN_NAME)
 OUTFLAG=-o $(BIN_PATH)
-CMDFILE=cmd/main.go
+CMDFILE=cmd/tupi/main.go
 TESTDATA_DIR=testdata
 PLUGIN_MODE_FLAG=-buildmode=plugin
 
