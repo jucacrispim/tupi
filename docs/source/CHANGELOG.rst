@@ -2,6 +2,10 @@ Changelog
 =========
 
 
+* v0.6.4
+
+  - Fix make install
+
 * v0.6.3
 
   - Pre process config file so inline tables can have new lines

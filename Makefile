@@ -72,10 +72,8 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 .PHONY: install # - Copy the binary to the path
-install:
-	$(GOBUILD) $(OUTFLAG)
-	cp $(BIN_PATH) .
-	go install
+install: build
+	go install github.com/jucacrispim/tupi/cmd/tupi
 
 .PHONY: uninstall # - Remove the binary from path
 uninstall:
