@@ -1,0 +1,16 @@
+host = "2.2.2.2"
+port = 1234
+rootDir = "/some/dir"
+timeout = 500  # seconds
+htpasswdFile = "/some/htpasswd"
+uploadPath = "/u/"
+extractPath = "/e/"
+maxUploadSize = 10000000  # 10 MB
+certFilePath = "/some/cert.pem"
+keyFilePath = "/some/file.key"
+defaultToIndex = true
+AuthPlugin = "./build/auth_plugin.so"
+AuthPluginConf = {
+    "somekey" = "the value",
+    "other" = "strange {value\n}"
+}

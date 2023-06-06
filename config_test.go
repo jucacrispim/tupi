@@ -71,6 +71,42 @@ func TestGetConfig_FromFile(t *testing.T) {
 	}
 }
 
+func TestGetConfig_FromFile_InlineTable(t *testing.T) {
+	old_command := flag.CommandLine
+	testCommandLine = []string{"-host", "1.1.1.1", "-conf", "./testdata/conf_inline_table.toml"}
+	flag.CommandLine = flag.NewFlagSet("tupi", flag.ExitOnError)
+	defer func() {
+		testCommandLine = nil
+		flag.CommandLine = old_command
+	}()
+
+	conf, err := GetConfig()
+	if err != nil {
+		t.Fatalf("Errr GetConfigFromFile %s", err.Error())
+	}
+
+	if conf.Domains["default"].Host != "2.2.2.2" {
+		t.Fatalf("Bad host GetConfigFromFile %s", conf.Domains["default"].Host)
+	}
+
+	if conf.Domains["default"].Port != 1234 {
+		t.Fatalf("Bad port GetConfigFromFile %d", conf.Domains["default"].Port)
+	}
+	if conf.Domains["default"].RootDir != "/some/dir" {
+		t.Fatalf("Bad root dir GetConfigFromFile %s", conf.Domains["default"].RootDir)
+	}
+
+	cnf := conf.Domains["default"].AuthPluginConf
+	val, _ := cnf["somekey"].(string)
+	if val != "the value" {
+		t.Fatalf("Bad plugin conf %s", val)
+	}
+	other, _ := cnf["other"].(string)
+	if other != "strange {value\n}" {
+		t.Fatalf("Bad plugin conf %s", other)
+	}
+}
+
 func TestGetConfig_FromFile_MultipleDomains(t *testing.T) {
 	old_command := flag.CommandLine
 	testCommandLine = []string{"-host", "1.1.1.1", "-conf", "./testdata/vdomains_conf.toml"}

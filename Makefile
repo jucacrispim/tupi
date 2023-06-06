@@ -57,7 +57,7 @@ docs:
 	./build-scripts/env.sh build-docs
 
 .PHONY: cov # - Run all tests and check coverage
-cov: buildtest coverage clean
+cov: buildtest coverage
 
 coverage:
 	./build-scripts/check_coverage.sh

@@ -196,10 +196,33 @@ func mergeConfs(confA DomainConfig, confB DomainConfig) DomainConfig {
 	return confB
 }
 
+// what we do here is a kind of hack before sending
+// the config to the toml parser.
+// First we split the contents in different sections (marked by a
+// line begining with `[`) and then send each section to the parser.
+// This is done so I can use each section as a key for the domains
+// map in the config.
+// After that I remove new lines inside inline tables. This is done
+// because toml does not accept new lines inside inline tables but
+// I want to be able to write them with new lines.
+// Check the documentation for the conf syntax.
 func getDomainRawConfs(rawConf string) map[string]string {
 	confs := make(map[string]string, 0)
 	conf := ""
 	domain := "default"
+	// boring stuff to remove lf cr from inline tables
+	lf := '\n'
+	cr := '\r'
+	sQuote := '\''
+	dQuote := '"'
+	escapeChr := '\\'
+	insideString := false
+	var openedChr rune = 0
+	openCurly := '{'
+	closeCurly := '}'
+	insideTable := false
+	openedTables := 0
+
 	for _, line := range strings.Split(rawConf, "\n") {
 		if strings.HasPrefix(line, "[") {
 			if conf != "" {
@@ -208,7 +231,53 @@ func getDomainRawConfs(rawConf string) map[string]string {
 			}
 			domain = strings.Trim(line, "[]")
 		} else {
-			conf += line + "\n"
+			newLineBytes := make([]byte, 0)
+			for i, chr := range line {
+				// are we inside a string?
+				isQuote := chr == sQuote || chr == dQuote
+				isRightQuote := openedChr == chr || !insideString
+				isLineStart := i == 0
+				var escaped bool
+				if isLineStart {
+					escaped = false
+				} else if len(line) > 0 {
+					escaped = line[i-1] == byte(escapeChr)
+				}
+				if isQuote && isRightQuote && (!escaped || isLineStart) {
+					insideString = !insideString
+					if insideString {
+						openedChr = chr
+					} else {
+						openedChr = 0
+					}
+				}
+				if insideString {
+					newLineBytes = append(newLineBytes, byte(chr))
+					continue
+				}
+
+				// are we inside a inline table?
+				if chr == openCurly {
+					openedTables += 1
+					insideTable = true
+				} else if (chr == closeCurly) && insideTable {
+					openedTables -= 1
+					if openedTables <= 0 {
+						openedTables = 0
+						insideTable = false
+					}
+				}
+				if !insideTable || (chr != lf && chr != cr) {
+					newLineBytes = append(newLineBytes, byte(chr))
+					continue
+				}
+				// replace line feed or carriage return by nothing
+				// newLineBytes = append(newLineBytes, byte(0))
+			}
+			conf += string(newLineBytes)
+			if !insideTable {
+				conf += string(lf)
+			}
 		}
 	}
 	confs[domain] = conf

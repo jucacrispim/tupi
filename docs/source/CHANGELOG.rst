@@ -1,6 +1,15 @@
 Changelog
 =========
 
+
+* v0.6.3
+
+  - Pre process config file so inline tables can have new lines
+
+* v0.6.2
+
+  - Change cmd path so it can be installed using go install
+
 * v0.6.1
 
   - Fix load plugins
