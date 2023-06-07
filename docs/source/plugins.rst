@@ -20,7 +20,8 @@ Authentication plugin
 
 To create an authentication plugin you must implement a function named ``Authenticate`` that
 get three params: A reference to ``http.Request``, a domain and a reference to a
-config map and returns a bool indicating if the authentication was successfull or not.
+config map and returns a bool and a int indicating if the authentication was successfull
+or not and the http status to be returned in case of failed authentication.
 
 .. code-block:: go
 
@@ -28,7 +29,7 @@ config map and returns a bool indicating if the authentication was successfull o
 
    import "net/http"
 
-   func Authenticate(r *http.Request, domain string, conf *map[string]any) bool {
+   func Authenticate(r *http.Request, domain string, conf *map[string]any) (bool, int) {
 	   if r.Host == "test.localhost" {
 		   return true
 	   }
