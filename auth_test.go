@@ -91,7 +91,7 @@ func TestAuthenticate_BasicAuth(t *testing.T) {
 		conf.HtpasswdFile = test.fpath
 
 		req.SetBasicAuth(test.user, test.password)
-		r := authenticate(req, &conf)
+		r, _ := authenticate(req, &conf)
 
 		if r != test.ok {
 			t.Errorf("error in %s %s: %t", test.user, test.password, r)
@@ -120,7 +120,7 @@ func TestAuthenticate_Plugin(t *testing.T) {
 		conf := DomainConfig{}
 		conf.AuthPlugin = test.fpath
 		req.Host = test.host
-		r := authenticate(req, &conf)
+		r, _ := authenticate(req, &conf)
 
 		if r != test.ok {
 			t.Errorf("error in %s: %t", test.host, r)

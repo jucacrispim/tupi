@@ -174,10 +174,10 @@ func checkUploadRequest(
 	w http.ResponseWriter, req *http.Request) (*multipart.Reader, error) {
 	err := &requestError{}
 	c := getConfigForRequest(req)
-	ok := authenticate(req, c)
+	ok, status := authenticate(req, c)
 	if !ok {
-		err.StatusCode = http.StatusUnauthorized
-		err.Err = errors.New("Unauthorized")
+		err.StatusCode = status
+		err.Err = errors.New("HTTPError " + strconv.FormatInt(int64(status), 10))
 		return nil, err
 	}
 

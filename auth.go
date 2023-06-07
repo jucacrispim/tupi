@@ -87,30 +87,32 @@ func userSecret(username string, fpath string) (string, error) {
 	return pwd, err
 }
 
-func basicAuth(r *http.Request, fpath string) bool {
+func basicAuth(r *http.Request, fpath string) (bool, int) {
 
 	if fpath == "" {
-		return false
+		return false, http.StatusUnauthorized
 	}
 
+	var ret bool = false
+	var status int = http.StatusForbidden
 	realm := "*"
 	sprovider := func(user, realm string) string {
 		pwd, _ := userSecret(user, fpath)
 		return pwd
 	}
 	a := &auth.BasicAuth{Realm: realm, Secrets: sprovider}
-	var ret bool = false
 
 	if username := a.CheckAuth(r); username != "" {
 		ret = true
+		status = http.StatusOK
 	}
 
-	return ret
+	return ret, status
 }
 
 type authFn func(*http.Request, map[string]interface{}) bool
 
-func authenticate(r *http.Request, conf *DomainConfig) bool {
+func authenticate(r *http.Request, conf *DomainConfig) (bool, int) {
 	if conf.AuthPlugin == "" {
 		return basicAuth(r, conf.HtpasswdFile)
 	}
@@ -119,7 +121,7 @@ func authenticate(r *http.Request, conf *DomainConfig) bool {
 		Errorf(
 			"Error gettting auth plugin %s. Not authenticating. %s",
 			conf.AuthPlugin, err.Error())
-		return false
+		return false, 500
 	}
 	ok := false
 	defer func() {
@@ -128,6 +130,6 @@ func authenticate(r *http.Request, conf *DomainConfig) bool {
 		}
 	}()
 	domain := getDomainForRequest(r)
-	ok = p(r, domain, &conf.AuthPluginConf)
-	return ok
+	ok, status := p(r, domain, &conf.AuthPluginConf)
+	return ok, status
 }

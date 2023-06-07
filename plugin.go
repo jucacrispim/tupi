@@ -61,7 +61,7 @@ func InitPlugin(fpath string, domain string, conf *map[string]any) (*plugin.Plug
 	return p, err
 }
 
-type AuthFn func(*http.Request, string, *map[string]any) bool
+type AuthFn func(*http.Request, string, *map[string]any) (bool, int)
 
 var authPluginsCache map[string]AuthFn = make(map[string]AuthFn)
 
@@ -83,7 +83,7 @@ func LoadAuthPlugin(fpath string, domain string, conf *map[string]any) error {
 	if err != nil {
 		return err
 	}
-	fn, ok := s.(func(*http.Request, string, *map[string]any) bool)
+	fn, ok := s.(func(*http.Request, string, *map[string]any) (bool, int))
 	if !ok {
 		return errors.New("Invalid Authenticate symbol for plugin: " + fpath)
 	}
