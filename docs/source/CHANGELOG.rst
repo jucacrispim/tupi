@@ -1,6 +1,10 @@
 Changelog
 =========
 
+* v0.7.0
+
+  - Refactor on auth plugins interface. Now Authenticate must return an int to be
+    used as an http reponse in case of failed authentication
 
 * v0.6.4
 
