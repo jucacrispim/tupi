@@ -114,8 +114,12 @@ type authFn func(*http.Request, map[string]interface{}) bool
 
 func authenticate(r *http.Request, conf *DomainConfig) (bool, int) {
 	if conf.AuthPlugin == "" {
+		Debugf("Loading basicAuth")
 		return basicAuth(r, conf.HtpasswdFile)
 	}
+	Debugf("Loading auth plugin")
+	auth := r.Header.Get("Authorization")
+	Debugf("Auth %s", auth)
 	p, err := GetAuthPlugin(conf.AuthPlugin)
 	if err != nil {
 		Errorf(
