@@ -123,7 +123,7 @@ func GetConfig() (Config, error) {
 }
 
 func GetConfigFromCommandLine() DomainConfig {
-	host := flag.String("host", "0.0.0.0", "host to listen.")
+	host := flag.String("host", "", "host to listen.")
 	port := flag.Int("port", 8080, "port to listen.")
 	rdir := flag.String("root", ".", "The directory to serve files from")
 	timeout := flag.Int("timeout", 240, "Timeout in seconds for read/write")
