@@ -70,6 +70,7 @@ run:
 .PHONY: clean # - Remove the files created during build
 clean:
 	rm -rf $(BUILD_DIR)
+	go clean -testcache
 
 .PHONY: install # - Copy the binary to the path
 install: build
