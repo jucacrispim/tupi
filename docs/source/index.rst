@@ -158,6 +158,8 @@ For all options available for tupi use the command ``tupi -h``
 	   Full path for a htpasswd file used for authentication
      -keyfile string
 	   Path for the tls key file
+     -loglevel string
+        Log level (default "info")
      -maxupload int
 	   Max size for uploaded files (default 10485760)
      -port int
@@ -223,6 +225,7 @@ different section of the config file corresponds to a virtual domain handled by 
    certFilePath = "/some/cert.pem"
    keyFilePath = "/some/file.key"
    defaultToIndex = true
+   logLevel = "debug"
 
 
    [otherdomain.net]
@@ -239,8 +242,8 @@ different section of the config file corresponds to a virtual domain handled by 
    defaultToIndex = false
 
 
-All options available ara supported by the virtual domains, except ``host`` and ``port``
-that are only available for the default server.
+All options available ara supported by the virtual domains, except ``host``, ``port``
+and ``loglevel`` that are only available for the default server.
 
 
 Plugins

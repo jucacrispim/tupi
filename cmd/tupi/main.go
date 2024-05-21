@@ -9,41 +9,44 @@ Usage:
 
 The params are:
 
-	 -certfile string
-		 Path for the tls certificate file
+		 -certfile string
+			 Path for the tls certificate file
 
-	 -conf string
-		 Path for the configuration file
+		 -conf string
+			 Path for the configuration file
 
-	 -default-to-index
-		 Returns the index.html instead of listing a directory
+		 -default-to-index
+			 Returns the index.html instead of listing a directory
 
-	 -epath string
-		 Path to extract files (default "/e/")
+		 -epath string
+			 Path to extract files (default "/e/")
 
-	 -host string
-		 host to listen. (default "0.0.0.0")
+		 -host string
+			 host to listen. (default "0.0.0.0")
 
-	 -htpasswd string
-		 Full path for a htpasswd file used for authentication
+		 -htpasswd string
+			 Full path for a htpasswd file used for authentication
 
-	 -keyfile string
-		 Path for the tls key file
+		 -keyfile string
+			 Path for the tls key file
 
-	 -maxupload int
-		 Max size for uploaded files (default 10485760)
+		 -maxupload int
+			 Max size for uploaded files (default 10485760)
 
-	 -port int
-		 port to listen. (default 8080)
+		 -port int
+			 port to listen. (default 8080)
 
-	 -root string
-		 The directory to serve files from (default ".")
+		 -root string
+			 The directory to serve files from (default ".")
 
-	 -timeout int
-		 Timeout in seconds for read/write (default 240)
+		 -timeout int
+			 Timeout in seconds for read/write (default 240)
 
-	 -upath string
-		 Path to upload files (default "/u/")
+		 -upath string
+			 Path to upload files (default "/u/")
+
+	     -loglevel string
+	         Log level for the running instance
 
 Only authenticated uploads are allowed. To upload a file one need to use
 an authentication method. Check the [online documentation] for details.

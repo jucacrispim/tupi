@@ -43,6 +43,7 @@ type DomainConfig struct {
 	ConfigFile     string
 	AuthPlugin     string
 	AuthPluginConf map[string]interface{}
+	LogLevel       string
 }
 
 func (c *DomainConfig) HasCert() bool {
@@ -140,6 +141,7 @@ func GetConfigFromCommandLine() DomainConfig {
 		false,
 		"Returns the index.html instead of listing a directory")
 	conf_path := flag.String("conf", "", "Path for the configuration file")
+	log_level := flag.String("loglevel", "info", "Log level")
 
 	args := getCmdlineArgs()
 	flag.CommandLine.Parse(args)
@@ -156,6 +158,7 @@ func GetConfigFromCommandLine() DomainConfig {
 		KeyFilePath:    *keyfile,
 		DefaultToIndex: *defaultToIndex,
 		ConfigFile:     *conf_path,
+		LogLevel:       *log_level,
 	}
 	return conf
 }

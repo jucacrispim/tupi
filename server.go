@@ -75,6 +75,8 @@ func SetupServer(conf Config) TupiServer {
 	// https://github.com/golang/go/issues/35626
 
 	setConfig(conf)
+	loglevel := conf.Domains["default"].LogLevel
+	SetLogLevelStr(loglevel)
 	handler := logRequest(http.HandlerFunc(route))
 	s := TupiServer{
 		Conf: conf,
