@@ -143,6 +143,7 @@ func getDomainForRequest(req *http.Request) string {
 }
 func getConfigForRequest(req *http.Request) *DomainConfig {
 	domain := getDomainForRequest(req)
+	Debugf("Got domain %s for request", domain)
 	if conf, exists := config.Domains[domain]; exists {
 		return &conf
 	}
