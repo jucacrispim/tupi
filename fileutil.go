@@ -51,7 +51,7 @@ func genRandFname(fname string) (string, error) {
 
 // writeFile writes the contents of an uploaded file into a file in the
 // local fs.
-func writeFile(dir string, r *multipart.Reader, randfname bool) (string, error) {
+func writeFile(dir string, r *multipart.Reader, randfname bool, prevent_overwrite bool) (string, error) {
 
 	part, err := r.NextPart()
 	if err != nil {
@@ -68,9 +68,12 @@ func writeFile(dir string, r *multipart.Reader, randfname bool) (string, error) 
 	}
 
 	fpath := dir + string(os.PathSeparator) + fname
+	if fileExists(fpath) && prevent_overwrite {
+		return "", errors.New("File " + fname + " already exists")
+	}
+
 	AcquireLock(fpath)
 	defer ReleaseLock(fpath)
-
 	f, err := os.Create(fpath)
 	if err != nil {
 		return "", err
@@ -99,9 +102,17 @@ func writeFile(dir string, r *multipart.Reader, randfname bool) (string, error) 
 	return fname, nil
 }
 
+func fileExists(fpath string) bool {
+	_, err := os.Stat(fpath)
+	if err == nil {
+		return true
+	}
+	return errors.Is(err, os.ErrNotExist)
+}
+
 // extractFiles extract the contents of a tar.gz file to the local
 // file system. All files will be extracted inside `root_dir`
-func extractFiles(file io.Reader, root_dir string) ([]string, error) {
+func extractFiles(file io.Reader, root_dir string, prevent_overwrite bool) ([]string, error) {
 	buf, err := gzip.NewReader(file)
 	if err != nil {
 		return nil, err
@@ -134,6 +145,9 @@ func extractFiles(file io.Reader, root_dir string) ([]string, error) {
 			files = append(files, fname)
 
 		case tar.TypeReg:
+			if fileExists(path) && prevent_overwrite {
+				return nil, errors.New("File " + path + " already exists")
+			}
 			AcquireLock(path)
 			out, err := os.Create(path)
 			if err != nil {

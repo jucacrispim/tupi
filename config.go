@@ -29,21 +29,22 @@ import (
 
 // DomainConfig values known to tupi
 type DomainConfig struct {
-	Host           string
-	Port           int
-	RootDir        string
-	Timeout        int
-	HtpasswdFile   string
-	UploadPath     string
-	ExtractPath    string
-	MaxUploadSize  int64
-	CertFilePath   string
-	KeyFilePath    string
-	DefaultToIndex bool
-	ConfigFile     string
-	AuthPlugin     string
-	AuthPluginConf map[string]interface{}
-	LogLevel       string
+	Host             string
+	Port             int
+	RootDir          string
+	Timeout          int
+	HtpasswdFile     string
+	UploadPath       string
+	ExtractPath      string
+	MaxUploadSize    int64
+	CertFilePath     string
+	KeyFilePath      string
+	DefaultToIndex   bool
+	ConfigFile       string
+	AuthPlugin       string
+	AuthPluginConf   map[string]interface{}
+	LogLevel         string
+	PreventOverwrite bool
 }
 
 func (c *DomainConfig) HasCert() bool {
@@ -142,23 +143,28 @@ func GetConfigFromCommandLine() DomainConfig {
 		"Returns the index.html instead of listing a directory")
 	conf_path := flag.String("conf", "", "Path for the configuration file")
 	log_level := flag.String("loglevel", "info", "Log level")
+	prevent_overwrite := flag.Bool(
+		"prevent-overwrite",
+		false,
+		"Prevents over writing existent files")
 
 	args := getCmdlineArgs()
 	flag.CommandLine.Parse(args)
 	conf := DomainConfig{
-		Host:           *host,
-		Port:           *port,
-		RootDir:        *rdir,
-		Timeout:        *timeout,
-		HtpasswdFile:   *htpasswdFile,
-		UploadPath:     *upath,
-		ExtractPath:    *epath,
-		MaxUploadSize:  *maxUpload,
-		CertFilePath:   *certfile,
-		KeyFilePath:    *keyfile,
-		DefaultToIndex: *defaultToIndex,
-		ConfigFile:     *conf_path,
-		LogLevel:       *log_level,
+		Host:             *host,
+		Port:             *port,
+		RootDir:          *rdir,
+		Timeout:          *timeout,
+		HtpasswdFile:     *htpasswdFile,
+		UploadPath:       *upath,
+		ExtractPath:      *epath,
+		MaxUploadSize:    *maxUpload,
+		CertFilePath:     *certfile,
+		KeyFilePath:      *keyfile,
+		DefaultToIndex:   *defaultToIndex,
+		ConfigFile:       *conf_path,
+		LogLevel:         *log_level,
+		PreventOverwrite: *prevent_overwrite,
 	}
 	return conf
 }

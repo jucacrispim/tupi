@@ -29,11 +29,14 @@ func TestWriteFile(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	var tests = []struct {
-		content   []byte
-		randfname bool
+		content           []byte
+		randfname         bool
+		prevent_overwrite bool
+		has_err           bool
 	}{
-		{[]byte("oi"), false},
-		{[]byte("oi"), true},
+		{[]byte("oi"), false, false, false},
+		{[]byte("oi"), true, false, false},
+		{[]byte("oi"), false, true, true},
 	}
 
 	for _, test := range tests {
@@ -43,12 +46,12 @@ func TestWriteFile(t *testing.T) {
 
 		}
 
-		fname, err := writeFile(dir, r, test.randfname)
-		if err != nil {
+		fname, err := writeFile(dir, r, test.randfname, test.prevent_overwrite)
+		if err != nil && !test.has_err {
 			t.Errorf("Error writing file: %s", err)
 		}
 
-		if fname != "file.txt" && !test.randfname {
+		if fname != "file.txt" && !test.randfname && !test.has_err {
 			t.Errorf("File %s not present", fname)
 		}
 
@@ -59,7 +62,8 @@ func TestWriteFile(t *testing.T) {
 func TestExtractFiles(t *testing.T) {
 	f, _ := os.Open("./testdata/test.tar.gz")
 	root_dir := "/tmp/xx"
-	fl, err := extractFiles(f, root_dir)
+	defer os.RemoveAll(root_dir)
+	fl, err := extractFiles(f, root_dir, false)
 
 	if err != nil {
 		t.Errorf("error extracting files %s", err)
@@ -75,7 +79,12 @@ func TestExtractFiles(t *testing.T) {
 		if err != nil && !is_bad {
 			t.Errorf("error extracting file %s: %s", path, err)
 		}
-
 	}
-	os.RemoveAll(root_dir)
+
+	f, _ = os.Open("./testdata/test.tar.gz")
+	_, err = extractFiles(f, root_dir, true)
+
+	if err == nil {
+		t.Errorf("Error preventing overwrite")
+	}
 }

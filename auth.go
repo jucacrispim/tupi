@@ -110,8 +110,6 @@ func basicAuth(r *http.Request, fpath string) (bool, int) {
 	return ret, status
 }
 
-type authFn func(*http.Request, map[string]interface{}) bool
-
 func authenticate(r *http.Request, conf *DomainConfig) (bool, int) {
 	if conf.AuthPlugin == "" {
 		Debugf("Loading basicAuth")
@@ -134,6 +132,7 @@ func authenticate(r *http.Request, conf *DomainConfig) (bool, int) {
 		}
 	}()
 	domain := getDomainForRequest(r)
+	Debugf("Got domain %s for request", domain)
 	ok, status := p(r, domain, &conf.AuthPluginConf)
 	return ok, status
 }

@@ -143,7 +143,6 @@ func getDomainForRequest(req *http.Request) string {
 }
 func getConfigForRequest(req *http.Request) *DomainConfig {
 	domain := getDomainForRequest(req)
-	Debugf("Got domain %s for request", domain)
 	if conf, exists := config.Domains[domain]; exists {
 		return &conf
 	}
@@ -217,7 +216,7 @@ func recieveFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	c := getConfigForRequest(req)
-	fname, err := writeFile(c.RootDir, reader, false)
+	fname, err := writeFile(c.RootDir, reader, false, c.PreventOverwrite)
 	if err != nil && err != io.EOF {
 		// notest
 		Errorf("%s\n", err.Error())
@@ -236,7 +235,7 @@ func recieveAndExtract(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	c := getConfigForRequest(req)
-	fname, err := writeFile(c.RootDir, reader, true)
+	fname, err := writeFile(c.RootDir, reader, true, false)
 	if err != nil && err != io.EOF {
 		// notest
 		Errorf("%s\n", err.Error())
@@ -255,7 +254,7 @@ func recieveAndExtract(w http.ResponseWriter, req *http.Request) {
 	}
 	defer file.Close()
 
-	files, err := extractFiles(file, c.RootDir)
+	files, err := extractFiles(file, c.RootDir, c.PreventOverwrite)
 	if err != nil {
 		// notest
 		Errorf("%s\n", err.Error())

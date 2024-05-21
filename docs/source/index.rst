@@ -164,6 +164,8 @@ For all options available for tupi use the command ``tupi -h``
 	   Max size for uploaded files (default 10485760)
      -port int
 	   port to listen. (default 8080)
+     -prevent-overwrite
+        Prevents over writing existent files
      -root string
 	   The directory to serve files from (default ".")
      -timeout int
