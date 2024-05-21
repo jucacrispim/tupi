@@ -22,10 +22,28 @@ import (
 	"testing"
 )
 
+func TestTracef(t *testing.T) {
+	oldlevel := GetLogLevel()
+	defer func() { SetLogLevel(oldlevel) }()
+	SetLogLevelStr("trace")
+	oldwriter := traceLogger.Writer()
+	defer func() { traceLogger.SetOutput(oldwriter) }()
+
+	var buf bytes.Buffer
+	traceLogger.SetOutput(&buf)
+
+	Tracef("oi")
+	r := make([]byte, 10)
+	buf.Read(r)
+	if string(r) != "[TRACE] oi" {
+		t.Fatalf("Bad log %s", string(r))
+	}
+}
+
 func TestDebugf(t *testing.T) {
 	oldlevel := GetLogLevel()
 	defer func() { SetLogLevel(oldlevel) }()
-	SetLogLevel(LevelDebug)
+	SetLogLevelStr("debug")
 	oldwriter := debugLogger.Writer()
 	defer func() { debugLogger.SetOutput(oldwriter) }()
 
@@ -43,7 +61,7 @@ func TestDebugf(t *testing.T) {
 func TestInfof(t *testing.T) {
 	oldlevel := GetLogLevel()
 	defer func() { SetLogLevel(oldlevel) }()
-	SetLogLevel(LevelInfo)
+	SetLogLevelStr("info")
 	oldwriter := infoLogger.Writer()
 	defer func() { infoLogger.SetOutput(oldwriter) }()
 
@@ -58,10 +76,28 @@ func TestInfof(t *testing.T) {
 	}
 }
 
+func TestWarninf(t *testing.T) {
+	oldlevel := GetLogLevel()
+	defer func() { SetLogLevel(oldlevel) }()
+	SetLogLevelStr("warning")
+	oldwriter := warningLogger.Writer()
+	defer func() { warningLogger.SetOutput(oldwriter) }()
+
+	var buf bytes.Buffer
+	warningLogger.SetOutput(&buf)
+
+	Warningf("oi")
+	r := make([]byte, 12)
+	buf.Read(r)
+	if string(r) != "[WARNING] oi" {
+		t.Fatalf("Bad log %s", string(r))
+	}
+}
+
 func TestErrorf(t *testing.T) {
 	oldlevel := GetLogLevel()
 	defer func() { SetLogLevel(oldlevel) }()
-	SetLogLevel(LevelError)
+	SetLogLevelStr("error")
 	oldwriter := errorLogger.Writer()
 	defer func() { errorLogger.SetOutput(oldwriter) }()
 
@@ -73,5 +109,12 @@ func TestErrorf(t *testing.T) {
 	buf.Read(r)
 	if string(r) != "[ERROR] oi" {
 		t.Fatalf("Bad log %s", string(r))
+	}
+}
+
+func TestSetLogLevelStr_invalid(t *testing.T) {
+	r := SetLogLevelStr("bad")
+	if r == nil {
+		t.Fatalf("No error for bad loglevel")
 	}
 }

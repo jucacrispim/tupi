@@ -18,8 +18,10 @@
 package tupi
 
 import (
+	"errors"
 	"log"
 	"os"
+	"strings"
 )
 
 type logLevel int
@@ -44,8 +46,43 @@ func SetLogLevel(level logLevel) {
 	currentLogLevel = level
 }
 
+func SetLogLevelStr(levelstr string) error {
+	norm := strings.ToLower(levelstr)
+	var logLevel logLevel
+	var err error
+	switch norm {
+	case "trace":
+		logLevel = LevelTrace
+
+	case "debug":
+		logLevel = LevelDebug
+
+	case "info":
+		logLevel = LevelInfo
+
+	case "warning":
+		logLevel = LevelWarning
+
+	case "error":
+		logLevel = LevelError
+
+	default:
+		err = errors.New("Invalid loglevel")
+		return err
+	}
+
+	SetLogLevel(logLevel)
+	return nil
+}
+
 func GetLogLevel() logLevel {
 	return currentLogLevel
+}
+
+func Tracef(format string, v ...interface{}) {
+	if currentLogLevel <= LevelTrace {
+		traceLogger.Printf(format, v...)
+	}
 }
 
 func Debugf(format string, v ...interface{}) {
@@ -57,6 +94,12 @@ func Debugf(format string, v ...interface{}) {
 func Infof(format string, v ...interface{}) {
 	if currentLogLevel <= LevelInfo {
 		infoLogger.Printf(format, v...)
+	}
+}
+
+func Warningf(format string, v ...interface{}) {
+	if currentLogLevel <= LevelWarning {
+		warningLogger.Printf(format, v...)
 	}
 }
 
