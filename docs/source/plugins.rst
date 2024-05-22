@@ -37,11 +37,11 @@ or not and the http status to be returned in case of failed authentication.
    }
 
 
-To compile the plugin you need to use ``-buildmode=plugin`` flag:
+To compile the plugin you need to use ``-buildmode=plugin`` and ``-trimpath`` flags:
 
 .. code-block:: sh
 
-   $ go build -o my_plugin.so -buildmode=plugin my_plugin.go
+   $ go build -o my_plugin.so -buildmode=plugin -trimpath my_plugin.go
 
 
 Now in your tupi config file you need to pass the path of the plugin.
