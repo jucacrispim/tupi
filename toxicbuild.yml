@@ -1,28 +1,51 @@
-language: go
-versions:
-  - '1.20'
 
-envvars:
-  PATH: "$PATH:$HOME/go/bin"
-  ENV: ci
+builders:
 
-system_packages:
-  - python3
-  - python3-venv
-  - python3-pip
+  - name: Build & Test
 
-steps:
-  - name: Setup test & docs env
-    command: make setupenv
+    envvars:
+      PATH: "$PATH:$HOME/go/bin"
+      ENV: ci
 
-  - name: Build
-    command: make build
+    steps:
+      - name: Setup env
+        command: make setupenv
 
-  - name: Test & coverage
-    command: make cov
+      - name: Build
+        command: make build
 
-  - name: build docs
-    command: make docs
+      - name: Test & coverage
+        command: make cov
 
-  - name: upload docs
-    command: ./build-scripts/upload_docs.sh
+
+
+  - name: Docs
+    branches:
+      - master
+
+    triggered_by:
+      - builder_name: Build & Test
+        statuses:
+          - success
+
+    plugins:
+      - name: apt-install
+        packages:
+          - python3
+          - python3-venv
+          - python3-pip
+          - curl
+
+    envvars:
+      ENV: ci
+
+    steps:
+
+      - name: Setup env
+        command: make setupdocsenv
+
+      - name: Build docs
+        command: ./build-scripts/build_docs.sh
+
+      - name: upload docs
+        command: ./build-scripts/upload_docs.sh

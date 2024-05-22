@@ -48,9 +48,14 @@ test:
 	$(GOBUILD)
 	$(GOTEST)
 
-.PHONY: setupenv # - Install needed tools for tests/docs
+.PHONY: setupenv # - Install needed tools for tests
 setupenv:
 	./build-scripts/env.sh setup-env
+
+.PHONY: setupenv # - Install needed tools for docs
+setupdocsenv:
+	./build-scripts/env.sh setup-docs-env
+
 
 .PHONY: docs # - Build documentation
 docs:
