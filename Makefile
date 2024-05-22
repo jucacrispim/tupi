@@ -74,7 +74,7 @@ clean:
 
 .PHONY: install # - Copy the binary to the path
 install: build
-	go install github.com/jucacrispim/tupi/cmd/tupi
+	go install -trimpath github.com/jucacrispim/tupi/cmd/tupi
 
 .PHONY: uninstall # - Remove the binary from path
 uninstall:
