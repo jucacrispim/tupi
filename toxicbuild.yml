@@ -3,6 +3,8 @@ builders:
 
   - name: Build & Test
 
+    platform: go1.20
+
     envvars:
       PATH: "$PATH:$HOME/go/bin"
       ENV: ci
