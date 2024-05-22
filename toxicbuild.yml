@@ -47,7 +47,7 @@ builders:
         command: make setupdocsenv
 
       - name: Build docs
-        command: ./build-scripts/build_docs.sh
+        command: make docs
 
       - name: upload docs
         command: ./build-scripts/upload_docs.sh
