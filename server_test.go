@@ -155,11 +155,14 @@ func TestRecieveFile(t *testing.T) {
 		status int
 		user   string
 		passwd string
+		prefix string
 	}{
-		{"PUT", UPLOAD_CONTENT_TYPE, 405, "test", "123"},
-		{"POST", "application/json", 400, "test", "123"},
-		{"POST", UPLOAD_CONTENT_TYPE, 403, "test", "456"},
-		{"POST", UPLOAD_CONTENT_TYPE, 201, "test", "123"},
+		{"PUT", UPLOAD_CONTENT_TYPE, 405, "test", "123", ""},
+		{"POST", "application/json", 400, "test", "123", ""},
+		{"POST", UPLOAD_CONTENT_TYPE, 403, "test", "456", ""},
+		{"POST", UPLOAD_CONTENT_TYPE, 201, "test", "123", ""},
+		{"POST", UPLOAD_CONTENT_TYPE, 400, "test", "123", "../invalid"},
+		{"POST", UPLOAD_CONTENT_TYPE, 201, "test", "123", "good-prefix"},
 	}
 
 	rdir := "/tmp/tupitest"
@@ -181,12 +184,13 @@ func TestRecieveFile(t *testing.T) {
 	conf.Domains = make(map[string]DomainConfig)
 	conf.Domains["default"] = dconf
 	server := SetupServer(conf)
-	pr, boundary, err := createMultipartPipeReader("file.txt", []byte("test"))
-	if err != nil {
-		t.Errorf("error creating reader")
-	}
 
 	for _, test := range tests {
+		pr, boundary, err := createBufferMultipartReader("file.txt", "test", test.prefix)
+		if err != nil {
+			t.Errorf("error creating reader")
+		}
+
 		req, _ := http.NewRequest(test.method, "/u/", pr)
 		req.SetBasicAuth(test.user, test.passwd)
 		req.Header.Set("Content-Type", test.ctype+"; boundary="+boundary)

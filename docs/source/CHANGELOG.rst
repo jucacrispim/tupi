@@ -1,6 +1,16 @@
 Changelog
 =========
 
+
+* v0.9.0
+
+  - Add prevent overwrite config param
+  - Add support for upload prefix
+
+* v0.8.0
+
+  - Add loglevel config param
+
 * v0.7.0
 
   - Refactor on auth plugins interface. Now Authenticate must return an int to be

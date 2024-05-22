@@ -19,6 +19,7 @@ package tupi
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"crypto/rand"
 	"errors"
@@ -38,6 +39,8 @@ import (
 	"time"
 )
 
+const INVALID_PREFIX_MSG = "Invalid prefix"
+
 var chunkSize int64 = 10 << 20
 
 func genRandFname(fname string) (string, error) {
@@ -53,52 +56,77 @@ func genRandFname(fname string) (string, error) {
 // local fs.
 func writeFile(dir string, r *multipart.Reader, randfname bool, prevent_overwrite bool) (string, error) {
 
-	part, err := r.NextPart()
-	if err != nil {
-		return "", err
-	}
 	var fname string
-	if randfname {
-		fname, err = genRandFname(part.FileName())
-		if err != nil {
-			return "", err
-		}
-	} else {
-		fname = part.FileName()
-	}
-
-	fpath := dir + string(os.PathSeparator) + fname
-	if fileExists(fpath) && prevent_overwrite {
-		return "", errors.New("File " + fname + " already exists")
-	}
-
-	AcquireLock(fpath)
-	defer ReleaseLock(fpath)
-	f, err := os.Create(fpath)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	var off int64 = 0
+	prefix := ""
+	var fcontent []byte
 	for {
-		c, err := ioutil.ReadAll(part)
-		if err != nil {
-			return fname, err
-		}
-		f.WriteAt([]byte(c), off)
-		err = f.Sync()
-		if err != nil {
-			return fname, err
-		}
-		off += int64(len(c))
-
-		part, err = r.NextPart()
+		part, err := r.NextPart()
 
 		if err == io.EOF {
 			break
 		}
 
+		if err != nil {
+			return "", err
+		}
+
+		formname := part.FormName()
+
+		switch formname {
+		case "file":
+			if randfname {
+				fname, err = genRandFname(part.FileName())
+				if err != nil {
+					return "", err
+				}
+			} else {
+				fname = part.FileName()
+			}
+
+			fcontent, err = ioutil.ReadAll(part)
+			if err != nil {
+				return fname, err
+			}
+
+		case "prefix":
+			bytes_prefix, err := ioutil.ReadAll(part)
+			if err != nil {
+				return fname, err
+			}
+			prefix = string(bytes_prefix)
+			prefix = strings.TrimLeft(prefix, string(os.PathSeparator))
+			if containsDotDot(prefix) {
+				return fname, errors.New(INVALID_PREFIX_MSG)
+
+			}
+
+			prefix = string(bytes_prefix)
+		}
+
 	}
+	var fpath string
+	sep := string(os.PathSeparator)
+	if prefix != "" {
+		base_dir := dir + sep + prefix + sep
+		os.MkdirAll(base_dir, 0755)
+		fpath = dir + sep + prefix + sep + fname
+	} else {
+		fpath = dir + sep + fname
+	}
+
+	if fileExists(fpath) && prevent_overwrite {
+		return "", errors.New("File " + fname + " already exists")
+	}
+	AcquireLock(fpath)
+	defer ReleaseLock(fpath)
+
+	f, err := os.Create(fpath)
+	if err != nil {
+		return "", err
+	}
+	io.Copy(f, bytes.NewBuffer(fcontent))
+	defer f.Close()
+
 	return fname, nil
 }
 
@@ -358,4 +386,18 @@ func dirList(w http.ResponseWriter, r *http.Request, f http.File) {
 		fmt.Fprintf(w, "<a href=\"%s\">%s</a>\n", url.String(), htmlReplacer.Replace(name))
 	}
 	fmt.Fprintf(w, "</pre>\n")
+}
+
+func isSlashRune(r rune) bool { return r == '/' || r == '\\' }
+
+func containsDotDot(v string) bool {
+	if !strings.Contains(v, "..") {
+		return false
+	}
+	for _, ent := range strings.FieldsFunc(v, isSlashRune) {
+		if ent == ".." {
+			return true
+		}
+	}
+	return false
 }

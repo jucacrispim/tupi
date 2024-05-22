@@ -68,7 +68,7 @@ func (s *TupiServer) Run() {
 }
 
 // SetupServer creates a new instance of the tupi
-// http server. You can start it using “HTTPServer.Run“
+// http server. You can start it using “TupiServer.Run“
 func SetupServer(conf Config) TupiServer {
 
 	// read this for new implementation
@@ -189,7 +189,8 @@ func checkUploadRequest(
 		return nil, err
 	}
 
-	if !strings.HasPrefix(req.Header.Get("Content-Type"), UPLOAD_CONTENT_TYPE) {
+	ctype := req.Header.Get("Content-Type")
+	if !strings.HasPrefix(ctype, UPLOAD_CONTENT_TYPE) {
 		msg := "Bad request. Use Content-Type: " + UPLOAD_CONTENT_TYPE
 		err.StatusCode = http.StatusBadRequest
 		err.Err = errors.New(msg)
@@ -218,6 +219,10 @@ func recieveFile(w http.ResponseWriter, req *http.Request) {
 	c := getConfigForRequest(req)
 	fname, err := writeFile(c.RootDir, reader, false, c.PreventOverwrite)
 	if err != nil && err != io.EOF {
+		if isBadRequest(err) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		// notest
 		Errorf("%s\n", err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -288,20 +293,6 @@ func showFile(w http.ResponseWriter, req *http.Request) {
 	serveFile(w, req, http.Dir(dir), file)
 }
 
-func isSlashRune(r rune) bool { return r == '/' || r == '\\' }
-
-func containsDotDot(v string) bool {
-	if !strings.Contains(v, "..") {
-		return false
-	}
-	for _, ent := range strings.FieldsFunc(v, isSlashRune) {
-		if ent == ".." {
-			return true
-		}
-	}
-	return false
-}
-
 func logRequest(h http.Handler) http.Handler {
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		sw := &statusedResponseWriter{w, http.StatusOK}
@@ -324,6 +315,11 @@ func getIp(req *http.Request) string {
 		ip = req.RemoteAddr
 	}
 	return ip
+}
+
+func isBadRequest(err error) bool {
+	msg := err.Error()
+	return msg == INVALID_PREFIX_MSG || strings.Contains(msg, "already exists")
 }
 
 // for tests

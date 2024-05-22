@@ -103,6 +103,15 @@ file must be in a input named ``file``.
    $ curl --user test:123 -F 'file=@/home/juca/powerreplica.jpg' http://localhost:8080/u/
 
 
+A ``prefix`` can be passed in the request so the file will be saved inside the ``prefix``
+directory
+
+.. code-block:: sh
+
+   $ curl --user test:123 -F 'file=@/home/juca/powerreplica.jpg' http://localhost:8080/u/ -F 'prefix=something'
+
+
+
 Upload and extract
 ++++++++++++++++++
 

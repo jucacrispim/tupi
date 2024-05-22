@@ -18,11 +18,31 @@
 package tupi
 
 import (
+	"bytes"
 	"io"
 	"mime/multipart"
 	"net/http"
 )
 
+func createBufferMultipartReader(fname string, content string, prefix string) (*bytes.Buffer, string, error) {
+	buf := new(bytes.Buffer)
+	bw := multipart.NewWriter(buf)
+
+	file, err := bw.CreateFormFile("file", "file.txt")
+	if err != nil {
+		return nil, "", err
+	}
+	file.Write([]byte(content))
+
+	field, err := bw.CreateFormField("prefix")
+	if err != nil {
+		return nil, "", err
+	}
+	field.Write([]byte(prefix))
+
+	bw.Close()
+	return buf, bw.Boundary(), nil
+}
 func createMultipartPipeReader(fname string, content []byte) (
 	*io.PipeReader, string, error) {
 	// https://stackoverflow.com/questions/43904974/
