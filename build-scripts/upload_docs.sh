@@ -4,4 +4,4 @@ cd docs/build
 mv html tupi
 tar -czf docs.tar.gz tupi
 
-curl --user -F 'file=@docs.tar.gz' https://docs.poraodojuca.dev/e/ -H "Authorization: Key $TUPI_AUTH_KEY"
+curl -F 'file=@docs.tar.gz' https://docs.poraodojuca.dev/e/ -H "Authorization: Key $TUPI_AUTH_KEY"
