@@ -210,6 +210,8 @@ Here is an example of a config file:
     certFilePath = "/some/cert.pem"
     keyFilePath = "/some/file.key"
     defaultToIndex = true
+    logLevel = "debug"
+    preventOverwrite = true
 
 .. _virtual-domains:
 
