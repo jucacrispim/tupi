@@ -2,6 +2,10 @@ Changelog
 =========
 
 
+* v0.9.1
+
+  - Fix prevent overwrite
+
 * v0.9.0
 
   - Add prevent overwrite config param
