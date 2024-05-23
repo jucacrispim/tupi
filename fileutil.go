@@ -135,7 +135,7 @@ func fileExists(fpath string) bool {
 	if err == nil {
 		return true
 	}
-	return errors.Is(err, os.ErrNotExist)
+	return !errors.Is(err, os.ErrNotExist)
 }
 
 // extractFiles extract the contents of a tar.gz file to the local

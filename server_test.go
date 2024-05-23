@@ -170,15 +170,16 @@ func TestRecieveFile(t *testing.T) {
 	defer os.RemoveAll(rdir)
 
 	dconf := DomainConfig{
-		Host:           "0.0.0.0",
-		Port:           8000,
-		RootDir:        rdir,
-		Timeout:        300,
-		HtpasswdFile:   fpath,
-		UploadPath:     "/u/",
-		ExtractPath:    "/e/",
-		MaxUploadSize:  10 << 20,
-		DefaultToIndex: true,
+		Host:             "0.0.0.0",
+		Port:             8000,
+		RootDir:          rdir,
+		Timeout:          300,
+		HtpasswdFile:     fpath,
+		UploadPath:       "/u/",
+		ExtractPath:      "/e/",
+		MaxUploadSize:    10 << 20,
+		DefaultToIndex:   true,
+		PreventOverwrite: true,
 	}
 	conf := Config{}
 	conf.Domains = make(map[string]DomainConfig)
