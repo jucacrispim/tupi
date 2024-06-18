@@ -1,4 +1,4 @@
-// Copyright 2020 Juca Crispim <juca@poraodojuca.net>
+// Copyright 2020, 2024 Juca Crispim <juca@poraodojuca.net>
 
 // This file is part of tupi.
 
@@ -43,21 +43,15 @@ const INVALID_PREFIX_MSG = "Invalid prefix"
 
 var chunkSize int64 = 10 << 20
 
-func genRandFname(fname string) (string, error) {
-	b := make([]byte, 8)
-	_, err := rand.Read(b)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%x-", b) + fname, nil
+type uploadedFile struct {
+	content []byte
+	fname   string
+	prefix  string
 }
 
-// writeFile writes the contents of an uploaded file into a file in the
-// local fs.
-func writeFile(dir string, r *multipart.Reader, randfname bool, prevent_overwrite bool) (string, error) {
-
+func getFileFromRequest(r *multipart.Reader) (*uploadedFile, error) {
 	var fname string
-	prefix := ""
+	var prefix string
 	var fcontent []byte
 	for {
 		part, err := r.NextPart()
@@ -67,42 +61,55 @@ func writeFile(dir string, r *multipart.Reader, randfname bool, prevent_overwrit
 		}
 
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		formname := part.FormName()
 
 		switch formname {
 		case "file":
-			if randfname {
-				fname, err = genRandFname(part.FileName())
-				if err != nil {
-					return "", err
-				}
-			} else {
-				fname = part.FileName()
-			}
-
+			fname = part.FileName()
 			fcontent, err = ioutil.ReadAll(part)
 			if err != nil {
-				return fname, err
+				return nil, err
 			}
 
 		case "prefix":
 			bytes_prefix, err := ioutil.ReadAll(part)
 			if err != nil {
-				return fname, err
+				return nil, err
 			}
-			prefix = string(bytes_prefix)
-			prefix = strings.TrimLeft(prefix, string(os.PathSeparator))
-			if containsDotDot(prefix) {
-				return fname, errors.New(INVALID_PREFIX_MSG)
-
-			}
-
 			prefix = string(bytes_prefix)
 		}
 
+	}
+
+	f := &uploadedFile{
+		content: fcontent,
+		prefix:  prefix,
+		fname:   fname,
+	}
+	return f, nil
+}
+
+// writeFile writes the contents of an uploaded file into a file in the
+// local fs.
+func writeFile(dir string, r *multipart.Reader, randfname bool, prevent_overwrite bool) (string, error) {
+
+	f, err := getFileFromRequest(r)
+	if err != nil {
+		return "", err
+	}
+	fname := f.fname
+	if randfname {
+		fname, err = genRandFname(fname)
+		if err != nil {
+			return "", err
+		}
+	}
+	prefix := strings.TrimLeft(f.prefix, string(os.PathSeparator))
+	if containsDotDot(prefix) {
+		return "", errors.New(INVALID_PREFIX_MSG)
 	}
 	var fpath string
 	sep := string(os.PathSeparator)
@@ -120,12 +127,12 @@ func writeFile(dir string, r *multipart.Reader, randfname bool, prevent_overwrit
 	AcquireLock(fpath)
 	defer ReleaseLock(fpath)
 
-	f, err := os.Create(fpath)
+	newf, err := os.Create(fpath)
 	if err != nil {
 		return "", err
 	}
-	io.Copy(f, bytes.NewBuffer(fcontent))
-	defer f.Close()
+	io.Copy(newf, bytes.NewBuffer(f.content))
+	defer newf.Close()
 
 	return fname, nil
 }
@@ -213,6 +220,15 @@ func extractFiles(file io.Reader, root_dir string, prevent_overwrite bool) ([]st
 
 	}
 	return files, nil
+}
+
+func genRandFname(fname string) (string, error) {
+	b := make([]byte, 8)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x-", b) + fname, nil
 }
 
 // from now on it a copy with modifications from the http package code

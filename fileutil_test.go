@@ -18,6 +18,7 @@
 package tupi
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -60,10 +61,10 @@ func TestWriteFile(t *testing.T) {
 }
 
 func TestExtractFiles(t *testing.T) {
-	f, _ := os.Open("./testdata/test.tar.gz")
+	f, _ := os.ReadFile("./testdata/test.tar.gz")
 	root_dir := "/tmp/xx"
 	defer os.RemoveAll(root_dir)
-	fl, err := extractFiles(f, root_dir, false)
+	fl, err := extractFiles(bytes.NewBuffer(f), root_dir, false)
 
 	if err != nil {
 		t.Errorf("error extracting files %s", err)
@@ -81,8 +82,7 @@ func TestExtractFiles(t *testing.T) {
 		}
 	}
 
-	f, _ = os.Open("./testdata/test.tar.gz")
-	_, err = extractFiles(f, root_dir, true)
+	_, err = extractFiles(bytes.NewBuffer(f), root_dir, true)
 
 	if err == nil {
 		t.Errorf("Error preventing overwrite")

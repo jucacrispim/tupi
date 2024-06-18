@@ -1,4 +1,4 @@
-// Copyright 2020, 2023 Juca Crispim <juca@poraodojuca.net>
+// Copyright 2020, 2023, 2024 Juca Crispim <juca@poraodojuca.dev>
 
 // This file is part of tupi.
 
@@ -18,13 +18,13 @@
 package tupi
 
 import (
+	"bytes"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -240,26 +240,15 @@ func recieveAndExtract(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	c := getConfigForRequest(req)
-	fname, err := writeFile(c.RootDir, reader, true, false)
-	if err != nil && err != io.EOF {
-		// notest
-		Errorf("%s\n", err.Error())
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	fpath := filepath.Join(c.RootDir, fname)
-
-	defer os.RemoveAll(fpath)
-	file, err := os.Open(fpath)
+	f, err := getFileFromRequest(reader)
 	if err != nil {
 		// notest
 		Errorf("%s\n", err.Error())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	defer file.Close()
-
-	files, err := extractFiles(file, c.RootDir, c.PreventOverwrite)
+	freader := bytes.NewBuffer(f.content)
+	files, err := extractFiles(freader, c.RootDir, c.PreventOverwrite)
 	if err != nil {
 		// notest
 		Errorf("%s\n", err.Error())
