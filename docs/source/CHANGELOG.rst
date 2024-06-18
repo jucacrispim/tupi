@@ -2,6 +2,10 @@ Changelog
 =========
 
 
+* v0.9.2
+
+  - Refactor on file extraction
+
 * v0.9.1
 
   - Fix prevent overwrite

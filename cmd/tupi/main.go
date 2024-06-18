@@ -30,11 +30,17 @@ The params are:
 		 -keyfile string
 			 Path for the tls key file
 
+		-loglevel string
+		   Log level (default "info")
+
 		 -maxupload int
 			 Max size for uploaded files (default 10485760)
 
 		 -port int
 			 port to listen. (default 8080)
+
+		 -prevent-overwrite
+			Prevents over writing existent files
 
 		 -root string
 			 The directory to serve files from (default ".")
