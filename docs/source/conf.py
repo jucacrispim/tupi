@@ -19,7 +19,7 @@ import sphinx_pdj_theme
 # -- Project information -----------------------------------------------------
 
 project = 'Tupi'
-copyright = '2020, 2023, Juca Crispim'
+copyright = '2020, 2023, 2024, Juca Crispim'
 author = 'Juca Crispim'
 
 

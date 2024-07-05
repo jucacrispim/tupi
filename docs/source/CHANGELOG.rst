@@ -2,6 +2,10 @@ Changelog
 =========
 
 
+* v0.10.0
+
+  - Add support to authenticated downloads
+
 * v0.9.2
 
   - Refactor on file extraction
