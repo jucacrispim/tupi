@@ -134,7 +134,7 @@ func TestShowFile_Authenticated(t *testing.T) {
 		password string
 	}{
 		{"/file.txt", 200, "test", "123"},
-		{"/file.txt", 403, "", ""},
+		{"/file.txt", 401, "", ""},
 	}
 	dconf := DomainConfig{
 		Host:           "0.0.0.0",
@@ -200,7 +200,7 @@ func TestRecieveFile(t *testing.T) {
 	}{
 		{"PUT", UPLOAD_CONTENT_TYPE, 405, "test", "123", ""},
 		{"POST", "application/json", 400, "test", "123", ""},
-		{"POST", UPLOAD_CONTENT_TYPE, 403, "test", "456", ""},
+		{"POST", UPLOAD_CONTENT_TYPE, 401, "test", "456", ""},
 		{"POST", UPLOAD_CONTENT_TYPE, 201, "test", "123", ""},
 		{"POST", UPLOAD_CONTENT_TYPE, 400, "test", "123", "../invalid"},
 		{"POST", UPLOAD_CONTENT_TYPE, 201, "test", "123", "good-prefix"},

@@ -94,7 +94,7 @@ func basicAuth(r *http.Request, fpath string) (bool, int) {
 	}
 
 	var ret bool = false
-	var status int = http.StatusForbidden
+	var status int = http.StatusUnauthorized
 	realm := "*"
 	sprovider := func(user, realm string) string {
 		pwd, _ := userSecret(user, fpath)
