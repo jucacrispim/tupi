@@ -35,6 +35,7 @@ const UPLOAD_CONTENT_TYPE = "multipart/form-data"
 const indexFile = "index.html"
 
 var config Config
+var certsCache map[string]tls.Certificate = make(map[string]tls.Certificate, 0)
 
 type TupiServer struct {
 	Conf Config
@@ -65,6 +66,21 @@ func (s *TupiServer) Run() {
 		}
 		startServer(server, use_ssl)
 	}
+}
+
+type statusedResponseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *statusedResponseWriter) WriteHeader(code int) {
+	w.status = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
+type requestError struct {
+	StatusCode int
+	Err        error
 }
 
 // SetupServer creates a new instance of the tupi
@@ -98,17 +114,102 @@ func SetupServer(conf Config) TupiServer {
 	return s
 }
 
-type statusedResponseWriter struct {
-	http.ResponseWriter
-	status int
+// Call the default tupi actions or a pluging based
+// in the domain config
+func route(w http.ResponseWriter, req *http.Request) {
+	c := getConfigForRequest(req)
+	serveDefaultTupi(w, req, c)
 }
 
-func (w *statusedResponseWriter) WriteHeader(code int) {
-	w.status = code
-	w.ResponseWriter.WriteHeader(code)
+// Does the default tupi actions, serve and receive files.
+func serveDefaultTupi(w http.ResponseWriter, req *http.Request, c *DomainConfig) {
+	if req.URL.Path == c.UploadPath {
+		recieveFile(w, req, c)
+	} else if req.URL.Path == c.ExtractPath {
+		recieveAndExtract(w, req, c)
+	} else {
+		showFile(w, req, c)
+	}
 }
 
-var certsCache map[string]tls.Certificate = make(map[string]tls.Certificate, 0)
+func recieveFile(w http.ResponseWriter, req *http.Request, c *DomainConfig) {
+
+	reader, err := checkUploadRequest(w, req, c)
+	if err != nil {
+		e, _ := err.(*requestError)
+		http.Error(w, string(err.Error()), e.StatusCode)
+		return
+	}
+	fname, err := writeFile(c.RootDir, reader, false, c.PreventOverwrite)
+	if err != nil && err != io.EOF {
+		if isBadRequest(err) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		// notest
+		Errorf("%s\n", err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte(fname + "\n"))
+}
+
+func recieveAndExtract(w http.ResponseWriter, req *http.Request, c *DomainConfig) {
+	reader, err := checkUploadRequest(w, req, c)
+	if err != nil {
+		e, _ := err.(*requestError)
+		http.Error(w, string(err.Error()), e.StatusCode)
+		return
+	}
+	f, err := getFileFromRequest(reader)
+	if err != nil {
+		// notest
+		Errorf("%s\n", err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	freader := bytes.NewBuffer(f.content)
+	files, err := extractFiles(freader, c.RootDir, c.PreventOverwrite)
+	if err != nil {
+		// notest
+		Errorf("%s\n", err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	for _, f := range files {
+		w.Write([]byte(f + "\n"))
+	}
+
+}
+
+func showFile(w http.ResponseWriter, req *http.Request, c *DomainConfig) {
+	if c.AuthDownloads {
+		err := authenticateRequest(req, c)
+		if err != nil {
+			http.Error(w, string(err.Error()), err.StatusCode)
+			return
+		}
+	}
+	if req.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if containsDotDot(req.URL.Path) {
+		http.Error(w, "invalid URL path", http.StatusBadRequest)
+		return
+	}
+
+	fpath := req.URL.Path
+	if strings.HasSuffix(fpath, "/") && c.DefaultToIndex {
+		fpath += indexFile
+	}
+	path := c.RootDir + fpath
+	dir, file := filepath.Split(path)
+	serveFile(w, req, http.Dir(dir), file)
+}
 
 // Returns a certificate based on the host config.
 func getCertificate(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -150,31 +251,13 @@ func getConfigForRequest(req *http.Request) *DomainConfig {
 	return &default_confg
 }
 
-// route is responsible for calling the proper handler based in the
-// request path.
-func route(w http.ResponseWriter, req *http.Request) {
-	c := getConfigForRequest(req)
-	if req.URL.Path == c.UploadPath {
-		recieveFile(w, req)
-	} else if req.URL.Path == c.ExtractPath {
-		recieveAndExtract(w, req)
-	} else {
-		showFile(w, req)
-	}
-}
-
-type requestError struct {
-	StatusCode int
-	Err        error
-}
-
 func (r *requestError) Error() string {
 	return fmt.Sprintf("%s", r.Err)
 }
 
 func checkUploadRequest(
-	w http.ResponseWriter, req *http.Request) (*multipart.Reader, error) {
-	c := getConfigForRequest(req)
+	w http.ResponseWriter, req *http.Request,
+	c *DomainConfig) (*multipart.Reader, error) {
 	err := authenticateRequest(req, c)
 	if err != nil {
 		return nil, err
@@ -204,88 +287,6 @@ func checkUploadRequest(
 		return nil, err
 	}
 	return reader, nil
-}
-
-func recieveFile(w http.ResponseWriter, req *http.Request) {
-
-	reader, err := checkUploadRequest(w, req)
-	if err != nil {
-		e, _ := err.(*requestError)
-		http.Error(w, string(err.Error()), e.StatusCode)
-		return
-	}
-	c := getConfigForRequest(req)
-	fname, err := writeFile(c.RootDir, reader, false, c.PreventOverwrite)
-	if err != nil && err != io.EOF {
-		if isBadRequest(err) {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		// notest
-		Errorf("%s\n", err.Error())
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(fname + "\n"))
-}
-
-func recieveAndExtract(w http.ResponseWriter, req *http.Request) {
-	reader, err := checkUploadRequest(w, req)
-	if err != nil {
-		e, _ := err.(*requestError)
-		http.Error(w, string(err.Error()), e.StatusCode)
-		return
-	}
-	c := getConfigForRequest(req)
-	f, err := getFileFromRequest(reader)
-	if err != nil {
-		// notest
-		Errorf("%s\n", err.Error())
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	freader := bytes.NewBuffer(f.content)
-	files, err := extractFiles(freader, c.RootDir, c.PreventOverwrite)
-	if err != nil {
-		// notest
-		Errorf("%s\n", err.Error())
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
-	for _, f := range files {
-		w.Write([]byte(f + "\n"))
-	}
-
-}
-
-func showFile(w http.ResponseWriter, req *http.Request) {
-	c := getConfigForRequest(req)
-	if c.AuthDownloads {
-		err := authenticateRequest(req, c)
-		if err != nil {
-			http.Error(w, string(err.Error()), err.StatusCode)
-			return
-		}
-	}
-	if req.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	if containsDotDot(req.URL.Path) {
-		http.Error(w, "invalid URL path", http.StatusBadRequest)
-		return
-	}
-
-	fpath := req.URL.Path
-	if strings.HasSuffix(fpath, "/") && c.DefaultToIndex {
-		fpath += indexFile
-	}
-	path := c.RootDir + fpath
-	dir, file := filepath.Split(path)
-	serveFile(w, req, http.Dir(dir), file)
 }
 
 func authenticateRequest(req *http.Request, c *DomainConfig) *requestError {
