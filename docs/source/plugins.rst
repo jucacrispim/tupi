@@ -1,3 +1,5 @@
+.. _plugins:
+
 Writing plugins
 ===============
 

@@ -174,7 +174,8 @@ func (r *requestError) Error() string {
 
 func checkUploadRequest(
 	w http.ResponseWriter, req *http.Request) (*multipart.Reader, error) {
-	c, err := authenticateRequest(req)
+	c := getConfigForRequest(req)
+	err := authenticateRequest(req, c)
 	if err != nil {
 		return nil, err
 	}
@@ -261,6 +262,14 @@ func recieveAndExtract(w http.ResponseWriter, req *http.Request) {
 }
 
 func showFile(w http.ResponseWriter, req *http.Request) {
+	c := getConfigForRequest(req)
+	if c.AuthDownloads {
+		err := authenticateRequest(req, c)
+		if err != nil {
+			http.Error(w, string(err.Error()), err.StatusCode)
+			return
+		}
+	}
 	if req.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -269,7 +278,7 @@ func showFile(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "invalid URL path", http.StatusBadRequest)
 		return
 	}
-	c := getConfigForRequest(req)
+
 	fpath := req.URL.Path
 	if strings.HasSuffix(fpath, "/") && c.DefaultToIndex {
 		fpath += indexFile
@@ -279,17 +288,16 @@ func showFile(w http.ResponseWriter, req *http.Request) {
 	serveFile(w, req, http.Dir(dir), file)
 }
 
-func authenticateRequest(req *http.Request) (*DomainConfig, *requestError) {
-	c := getConfigForRequest(req)
+func authenticateRequest(req *http.Request, c *DomainConfig) *requestError {
 	ok, status := authenticate(req, c)
 	if !ok {
 		err := &requestError{}
 		err.StatusCode = status
 		err.Err = errors.New("HTTPError " + strconv.FormatInt(int64(status), 10))
-		return nil, err
+		return err
 	}
 
-	return c, nil
+	return nil
 
 }
 func logRequest(h http.Handler) http.Handler {

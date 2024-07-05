@@ -125,6 +125,47 @@ func TestShowFile_ListDir(t *testing.T) {
 	}
 }
 
+func TestShowFile_Authenticated(t *testing.T) {
+	fpath := "./testdata/htpasswd"
+	var tests = []struct {
+		path     string
+		status   int
+		username string
+		password string
+	}{
+		{"/file.txt", 200, "test", "123"},
+		{"/file.txt", 403, "", ""},
+	}
+	dconf := DomainConfig{
+		Host:           "0.0.0.0",
+		Port:           8000,
+		RootDir:        "./testdata",
+		Timeout:        300,
+		HtpasswdFile:   fpath,
+		UploadPath:     "/u/",
+		ExtractPath:    "/e/",
+		MaxUploadSize:  10 << 20,
+		DefaultToIndex: true,
+		AuthDownloads:  true,
+	}
+	conf := Config{}
+	conf.Domains = make(map[string]DomainConfig)
+	conf.Domains["default"] = dconf
+	server := SetupServer(conf)
+	for _, test := range tests {
+		req, _ := http.NewRequest("GET", test.path, nil)
+		if test.username != "" && test.password != "" {
+			req.SetBasicAuth(test.username, test.password)
+		}
+		w := httptest.NewRecorder()
+		server.Servers[0].Handler.ServeHTTP(w, req)
+		status := w.Code
+		if status != test.status {
+			t.Errorf("got %d, expected %d", status, test.status)
+		}
+	}
+}
+
 func TestGetIp(t *testing.T) {
 
 	var tests = []struct {

@@ -45,6 +45,7 @@ type DomainConfig struct {
 	AuthPluginConf   map[string]interface{}
 	LogLevel         string
 	PreventOverwrite bool
+	AuthDownloads    bool
 }
 
 func (c *DomainConfig) HasCert() bool {
@@ -147,6 +148,7 @@ func GetConfigFromCommandLine() DomainConfig {
 		"prevent-overwrite",
 		false,
 		"Prevents over writing existent files")
+	auth_downloads := flag.Bool("auth-downloads", false, "Autenticate downloads")
 
 	args := getCmdlineArgs()
 	flag.CommandLine.Parse(args)
@@ -165,6 +167,7 @@ func GetConfigFromCommandLine() DomainConfig {
 		ConfigFile:       *conf_path,
 		LogLevel:         *log_level,
 		PreventOverwrite: *prevent_overwrite,
+		AuthDownloads:    *auth_downloads,
 	}
 	return conf
 }

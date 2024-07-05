@@ -69,6 +69,19 @@ index.html file in it. To do so use the option ``default-to-index``.
    $ tupi -default-to-index
 
 
+To authenticate download, use the options ``auth-downloads`` and ``htpasswd``.
+
+.. code-block:: sh
+
+   $ tupi -auth-downloads -htpasswd /some/htpasswd/file.
+
+
+.. note::
+
+   Tupi also supports other authentication methods via plugins.
+   Check :ref:`plugins`.
+
+
 Uploading files
 +++++++++++++++
 
@@ -153,6 +166,8 @@ For all options available for tupi use the command ``tupi -h``
 
    $ tupi -h
    Usage of tupi:
+     -auth-downloads
+	    Autenticate downloads
      -certfile string
 	   Path for the tls certificate file
      -conf string
