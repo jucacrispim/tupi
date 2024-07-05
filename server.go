@@ -98,6 +98,16 @@ func SetupServer(conf Config) TupiServer {
 	return s
 }
 
+type statusedResponseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *statusedResponseWriter) WriteHeader(code int) {
+	w.status = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
 var certsCache map[string]tls.Certificate = make(map[string]tls.Certificate, 0)
 
 // Returns a certificate based on the host config.
@@ -120,16 +130,6 @@ func getCertificate(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	cert, err := tls.LoadX509KeyPair(conf.CertFilePath, conf.KeyFilePath)
 	certsCache[domain] = cert
 	return &cert, err
-}
-
-type statusedResponseWriter struct {
-	http.ResponseWriter
-	status int
-}
-
-func (w *statusedResponseWriter) WriteHeader(code int) {
-	w.status = code
-	w.ResponseWriter.WriteHeader(code)
 }
 
 func setConfig(conf Config) {
@@ -206,6 +206,16 @@ func checkUploadRequest(
 		return nil, err
 	}
 	return reader, nil
+}
+
+func newFunction(req *http.Request, c *DomainConfig, err *requestError) (bool, *multipart.Reader, error) {
+	ok, status := authenticate(req, c)
+	if !ok {
+		err.StatusCode = status
+		err.Err = errors.New("HTTPError " + strconv.FormatInt(int64(status), 10))
+		return true, nil, err
+	}
+	return false, nil, nil
 }
 
 func recieveFile(w http.ResponseWriter, req *http.Request) {
