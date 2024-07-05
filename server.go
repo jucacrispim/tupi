@@ -208,16 +208,6 @@ func checkUploadRequest(
 	return reader, nil
 }
 
-func newFunction(req *http.Request, c *DomainConfig, err *requestError) (bool, *multipart.Reader, error) {
-	ok, status := authenticate(req, c)
-	if !ok {
-		err.StatusCode = status
-		err.Err = errors.New("HTTPError " + strconv.FormatInt(int64(status), 10))
-		return true, nil, err
-	}
-	return false, nil, nil
-}
-
 func recieveFile(w http.ResponseWriter, req *http.Request) {
 
 	reader, err := checkUploadRequest(w, req)
