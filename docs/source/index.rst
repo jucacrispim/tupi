@@ -227,6 +227,7 @@ Here is an example of a config file:
     defaultToIndex = true
     logLevel = "debug"
     preventOverwrite = true
+    AuthDownloads = false
 
 .. _virtual-domains:
 
