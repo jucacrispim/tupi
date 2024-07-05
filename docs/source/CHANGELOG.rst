@@ -2,6 +2,10 @@ Changelog
 =========
 
 
+* v0.10.1
+
+  - Fix bad auth status code
+
 * v0.10.0
 
   - Add support to authenticated downloads
