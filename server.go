@@ -174,14 +174,11 @@ func (r *requestError) Error() string {
 
 func checkUploadRequest(
 	w http.ResponseWriter, req *http.Request) (*multipart.Reader, error) {
-	err := &requestError{}
-	c := getConfigForRequest(req)
-	ok, status := authenticate(req, c)
-	if !ok {
-		err.StatusCode = status
-		err.Err = errors.New("HTTPError " + strconv.FormatInt(int64(status), 10))
+	c, err := authenticateRequest(req)
+	if err != nil {
 		return nil, err
 	}
+	err = &requestError{}
 
 	if req.Method != "POST" {
 		err.StatusCode = http.StatusMethodNotAllowed
@@ -282,6 +279,19 @@ func showFile(w http.ResponseWriter, req *http.Request) {
 	serveFile(w, req, http.Dir(dir), file)
 }
 
+func authenticateRequest(req *http.Request) (*DomainConfig, *requestError) {
+	c := getConfigForRequest(req)
+	ok, status := authenticate(req, c)
+	if !ok {
+		err := &requestError{}
+		err.StatusCode = status
+		err.Err = errors.New("HTTPError " + strconv.FormatInt(int64(status), 10))
+		return nil, err
+	}
+
+	return c, nil
+
+}
 func logRequest(h http.Handler) http.Handler {
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		sw := &statusedResponseWriter{w, http.StatusOK}
