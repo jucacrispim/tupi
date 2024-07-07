@@ -66,6 +66,24 @@ func TestLoadAuthPlugin(t *testing.T) {
 	}
 }
 
+func TestLoadServePlugin(t *testing.T) {
+	fpath := "./build/serve_plugin.so"
+	fpath_bad := "./build/serve_plugin_bad.so"
+	var tests = []struct {
+		fpath string
+		ok    bool
+	}{
+		{fpath, true},
+		{fpath_bad, false},
+	}
+	for _, test := range tests {
+		err := LoadServePlugin(test.fpath, "domain", nil)
+		if err != nil && test.ok {
+			t.Fatalf(err.Error())
+		}
+	}
+}
+
 func TestGetAuthPluign(t *testing.T) {
 	fpath := "./build/auth_plugin.so"
 	LoadAuthPlugin(fpath, "domain", nil)

@@ -1,4 +1,4 @@
-// Copyright 2023 Juca Crispim <juca@poraodojuca.net>
+// Copyright 2023, 2024 Juca Crispim <juca@poraodojuca.dev>
 
 // This file is part of tupi.
 
@@ -23,6 +23,12 @@ import (
 	"net/http"
 	"plugin"
 )
+
+type AuthFn func(*http.Request, string, *map[string]any) (bool, int)
+type ServeFn func(*http.Request, string, *map[string]any) (bool, int, []byte)
+
+var authPluginsCache map[string]AuthFn = make(map[string]AuthFn)
+var servePluginsCache map[string]ServeFn = make(map[string]ServeFn)
 
 // InitPlugin tries to run the “Init“ function of a plugin. As it is
 // optinal, if not found returns without error.
@@ -61,10 +67,6 @@ func InitPlugin(fpath string, domain string, conf *map[string]any) (*plugin.Plug
 	return p, err
 }
 
-type AuthFn func(*http.Request, string, *map[string]any) (bool, int)
-
-var authPluginsCache map[string]AuthFn = make(map[string]AuthFn)
-
 // LoadAuthPlugin loads a authentication plugin looking for an “Authenticate“ function.
 // The “Authenticate“ function gets a referece to http.Request, a domain and a
 // config map for the domain as parameters.
@@ -87,7 +89,41 @@ func LoadAuthPlugin(fpath string, domain string, conf *map[string]any) error {
 	if !ok {
 		return errors.New("Invalid Authenticate symbol for plugin: " + fpath)
 	}
+
+	if err != nil {
+		return err
+	}
 	authPluginsCache[fpath] = fn
+	return nil
+}
+
+// LoadServePlugin loads a authentication plugin looking for an “Serve“ function.
+// The “Serve“ function gets a referece to http.Request, a domain and a
+// config map for the domain as parameters.
+// The signature of the “Serve“ function is as follows:
+//
+//	func(*http.Request, string, map[string]any)
+//
+// LoadServePlugin is intended to be run as part of the server start process.
+func LoadServePlugin(fpath string, domain string, conf *map[string]any) error {
+	p, err := InitPlugin(fpath, domain, conf)
+	if err != nil {
+		return err
+	}
+
+	s, err := p.Lookup("Serve")
+	if err != nil {
+		return err
+	}
+	fn, ok := s.(func(*http.Request, string, *map[string]any) (bool, int, []byte))
+	if !ok {
+		return errors.New("Invalid Serve symbol for plugin: " + fpath)
+	}
+
+	if err != nil {
+		return err
+	}
+	servePluginsCache[fpath] = fn
 	return nil
 }
 

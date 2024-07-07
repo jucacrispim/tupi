@@ -1,4 +1,4 @@
-// Copyright 2023 Juca Crispim <juca@poraodojuca.net>
+// Copyright 2023, 2024 Juca Crispim <juca@poraodojuca.dev>
 
 // This file is part of tupi.
 
@@ -27,7 +27,6 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// DomainConfig values known to tupi
 type DomainConfig struct {
 	Host             string
 	Port             int
@@ -43,6 +42,8 @@ type DomainConfig struct {
 	ConfigFile       string
 	AuthPlugin       string
 	AuthPluginConf   map[string]interface{}
+	ServePlugin      string
+	ServePluginConf  map[string]interface{}
 	LogLevel         string
 	PreventOverwrite bool
 	AuthDownloads    bool

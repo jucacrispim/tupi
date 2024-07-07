@@ -413,8 +413,10 @@ func TestGetCertificate_VirtualDomain(t *testing.T) {
 func TestTupiServer_LoadPlugins(t *testing.T) {
 	aconf := DomainConfig{}
 	aconf.AuthPlugin = "./build/auth_plugin.so"
+	aconf.ServePlugin = "./build/serve_plugin.so"
 	otherconf := DomainConfig{}
 	otherconf.AuthPlugin = "./build/init_plugin_bad.so"
+	otherconf.ServePlugin = "./build/init_plugin_bad.so"
 	c := Config{}
 	c.Domains = make(map[string]DomainConfig)
 	c.Domains["default"] = aconf

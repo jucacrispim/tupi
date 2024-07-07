@@ -48,7 +48,14 @@ func (s *TupiServer) LoadPlugins() {
 		if conf.AuthPlugin != "" {
 			err := LoadAuthPlugin(conf.AuthPlugin, domain, &conf.AuthPluginConf)
 			if err != nil {
-				Errorf("Error loading plugin %s", err.Error())
+				Errorf("Error loading auth plugin %s", err.Error())
+			}
+		}
+
+		if conf.ServePlugin != "" {
+			err := LoadServePlugin(conf.ServePlugin, domain, &conf.ServePluginConf)
+			if err != nil {
+				Errorf("Error loading serve plugin %s", err.Error())
 			}
 		}
 	}
