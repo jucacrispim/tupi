@@ -46,7 +46,7 @@ type DomainConfig struct {
 	ServePluginConf  map[string]interface{}
 	LogLevel         string
 	PreventOverwrite bool
-	AuthDownloads    bool
+	AuthMethods      []string
 }
 
 func (c *DomainConfig) HasCert() bool {
@@ -142,17 +142,24 @@ func GetConfigFromCommandLine() DomainConfig {
 	defaultToIndex := flag.Bool(
 		"default-to-index",
 		false,
-		"Returns the index.html instead of listing a directory")
-	conf_path := flag.String("conf", "", "Path for the configuration file")
-	log_level := flag.String("loglevel", "info", "Log level")
-	prevent_overwrite := flag.Bool(
+		"Returns the index.html instead of listing the contents of a directory")
+	confPath := flag.String("conf", "", "Path for the configuration file")
+	logLevel := flag.String("loglevel", "info", "Log level")
+	preventOverwrite := flag.Bool(
 		"prevent-overwrite",
 		false,
 		"Prevents over writing existent files")
-	auth_downloads := flag.Bool("auth-downloads", false, "Autenticate downloads")
+	authMethods := flag.String("auth-methods", "POST",
+		"A comma separeted list of http methods that must be authenticated")
 
 	args := getCmdlineArgs()
 	flag.CommandLine.Parse(args)
+
+	var m []string
+	if *authMethods != "" {
+		m = strings.Split(*authMethods, ",")
+	}
+
 	conf := DomainConfig{
 		Host:             *host,
 		Port:             *port,
@@ -165,10 +172,10 @@ func GetConfigFromCommandLine() DomainConfig {
 		CertFilePath:     *certfile,
 		KeyFilePath:      *keyfile,
 		DefaultToIndex:   *defaultToIndex,
-		ConfigFile:       *conf_path,
-		LogLevel:         *log_level,
-		PreventOverwrite: *prevent_overwrite,
-		AuthDownloads:    *auth_downloads,
+		ConfigFile:       *confPath,
+		LogLevel:         *logLevel,
+		PreventOverwrite: *preventOverwrite,
+		AuthMethods:      m,
 	}
 	return conf
 }

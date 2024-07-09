@@ -1,4 +1,4 @@
-// Copyright 2023 Juca Crispim <juca@poraodojuca.net>
+// Copyright 2023 Juca Crispim <juca@poraodojuca.dev>
 
 // This file is part of tupi.
 
@@ -20,12 +20,13 @@ package tupi
 import (
 	"flag"
 	"os"
+	"reflect"
 	"testing"
 )
 
 func TestGetConfig_FromCommandLine(t *testing.T) {
 	old_command := flag.CommandLine
-	testCommandLine = []string{"-host", "1.1.1.1", "-root", "/some/dir"}
+	testCommandLine = []string{"-host", "1.1.1.1", "-root", "/some/dir", "-auth-methods", "POST,GET"}
 	flag.CommandLine = flag.NewFlagSet("tupi", flag.ExitOnError)
 	defer func() {
 		testCommandLine = nil
@@ -42,6 +43,10 @@ func TestGetConfig_FromCommandLine(t *testing.T) {
 	}
 	if conf.Domains["default"].RootDir != "/some/dir" {
 		t.Fatalf("Bad root dir GetConfigFromCommandLine %s", conf.Domains["default"].RootDir)
+	}
+
+	if !reflect.DeepEqual(conf.Domains["default"].AuthMethods, []string{"POST", "GET"}) {
+		t.Fatalf("Bad auth methods %s", conf.Domains["default"].AuthMethods)
 	}
 }
 

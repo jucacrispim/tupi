@@ -9,3 +9,4 @@ maxUploadSize = 10000000  # 10 MB
 certFilePath = "/some/cert.pem"
 keyFilePath = "/some/file.key"
 defaultToIndex = true
+authMethods = ["POST"]

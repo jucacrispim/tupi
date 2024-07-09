@@ -125,6 +125,13 @@ func SetupServer(conf Config) TupiServer {
 // in the domain config
 func route(w http.ResponseWriter, req *http.Request) {
 	c := getConfigForRequest(req)
+	if shouldAuthenticate(req, c) {
+		ok, status := authenticate(req, c)
+		if !ok {
+			http.Error(w, "Bad auth", status)
+			return
+		}
+	}
 	serveDefaultTupi(w, req, c)
 }
 
@@ -193,13 +200,6 @@ func recieveAndExtract(w http.ResponseWriter, req *http.Request, c *DomainConfig
 }
 
 func showFile(w http.ResponseWriter, req *http.Request, c *DomainConfig) {
-	if c.AuthDownloads {
-		err := authenticateRequest(req, c)
-		if err != nil {
-			http.Error(w, string(err.Error()), err.StatusCode)
-			return
-		}
-	}
 	if req.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -262,14 +262,19 @@ func (r *requestError) Error() string {
 	return fmt.Sprintf("%s", r.Err)
 }
 
+func shouldAuthenticate(req *http.Request, c *DomainConfig) bool {
+	for _, meth := range c.AuthMethods {
+		if strings.ToUpper(meth) == strings.ToUpper(req.Method) {
+			return true
+		}
+	}
+	return false
+}
+
 func checkUploadRequest(
 	w http.ResponseWriter, req *http.Request,
 	c *DomainConfig) (*multipart.Reader, error) {
-	err := authenticateRequest(req, c)
-	if err != nil {
-		return nil, err
-	}
-	err = &requestError{}
+	err := &requestError{}
 
 	if req.Method != "POST" {
 		err.StatusCode = http.StatusMethodNotAllowed
@@ -296,18 +301,6 @@ func checkUploadRequest(
 	return reader, nil
 }
 
-func authenticateRequest(req *http.Request, c *DomainConfig) *requestError {
-	ok, status := authenticate(req, c)
-	if !ok {
-		err := &requestError{}
-		err.StatusCode = status
-		err.Err = errors.New("HTTPError " + strconv.FormatInt(int64(status), 10))
-		return err
-	}
-
-	return nil
-
-}
 func logRequest(h http.Handler) http.Handler {
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		sw := &statusedResponseWriter{w, http.StatusOK}

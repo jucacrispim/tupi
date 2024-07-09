@@ -146,7 +146,7 @@ func TestShowFile_Authenticated(t *testing.T) {
 		ExtractPath:    "/e/",
 		MaxUploadSize:  10 << 20,
 		DefaultToIndex: true,
-		AuthDownloads:  true,
+		AuthMethods:    []string{"POST", "GET"},
 	}
 	conf := Config{}
 	conf.Domains = make(map[string]DomainConfig)
@@ -221,6 +221,7 @@ func TestRecieveFile(t *testing.T) {
 		MaxUploadSize:    10 << 20,
 		DefaultToIndex:   true,
 		PreventOverwrite: true,
+		AuthMethods:      []string{"POST"},
 	}
 	conf := Config{}
 	conf.Domains = make(map[string]DomainConfig)

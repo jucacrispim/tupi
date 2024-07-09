@@ -69,11 +69,11 @@ index.html file in it. To do so use the option ``default-to-index``.
    $ tupi -default-to-index
 
 
-To authenticate download, use the options ``auth-downloads`` and ``htpasswd``.
+To authenticate downloads, use the options ``-auth-methods POST,GET`` and ``htpasswd``.
 
 .. code-block:: sh
 
-   $ tupi -auth-downloads -htpasswd /some/htpasswd/file.
+   $ tupi -auth-methods POST,GET -htpasswd /some/htpasswd/file.
 
 
 .. note::
@@ -227,7 +227,7 @@ Here is an example of a config file:
     defaultToIndex = true
     logLevel = "debug"
     preventOverwrite = true
-    AuthDownloads = false
+    authMethods = ["POST"]
 
 .. _virtual-domains:
 
