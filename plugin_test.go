@@ -104,6 +104,26 @@ func TestGetAuthPluign(t *testing.T) {
 	}
 }
 
+func TestGetServePluign(t *testing.T) {
+	fpath := "./build/serve_plugin.so"
+	LoadServePlugin(fpath, "domain", nil)
+
+	var tests = []struct {
+		fpath string
+		ok    bool
+	}{
+		{fpath, true},
+		{"error.so", false},
+	}
+
+	for _, test := range tests {
+		_, err := GetServePlugin(test.fpath)
+		if err != nil && test.ok {
+			t.Fatalf(err.Error())
+		}
+	}
+}
+
 func compareErr(err1 error, err2 error) bool {
 	if err1 == nil && err2 == nil {
 		return true

@@ -428,3 +428,42 @@ func TestTupiServer_LoadPlugins(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 }
+
+func TestTupiServer_ServePlugin(t *testing.T) {
+	dconf := DomainConfig{}
+	dconf.ServePlugin = "./build/serve_plugin.so"
+
+	conf := Config{}
+	conf.Domains = make(map[string]DomainConfig)
+	conf.Domains["default"] = dconf
+	server := SetupServer(conf)
+	url := "/serve"
+	req, _ := http.NewRequest("GET", url, nil)
+	w := httptest.NewRecorder()
+	server.Servers[0].Handler.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("Wrong status for serve plugin %d", w.Code)
+	}
+
+}
+
+func TestTupiServer_ServePlugin_error(t *testing.T) {
+	dconf := DomainConfig{}
+	dconf.ServePlugin = "./build/serve_plugin.so"
+
+	conf := Config{}
+	conf.Domains = make(map[string]DomainConfig)
+	conf.Domains["default"] = dconf
+	server := SetupServer(conf)
+	url := "/serve"
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Host = "error.req"
+	w := httptest.NewRecorder()
+	server.Servers[0].Handler.ServeHTTP(w, req)
+
+	if w.Code != 400 {
+		t.Fatalf("Wrong status for serve plugin %d", w.Code)
+	}
+
+}

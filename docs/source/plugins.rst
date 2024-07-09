@@ -17,6 +17,24 @@ function gets a domain and a reference to a config map and returns an error
    }
 
 
+Serve plugin
+------------
+
+To create a serve plugin you must implement a function named ``Serve`` the get
+three params: A reference to ``http.Request``, a domain and a referece to a
+config map and return a bool, a int and a array of bytes with the response body.
+
+.. code-block:: go
+
+   package main
+
+   import "net/http"
+
+   func Serve(r *http.Request, domain string, conf *map[string]any) (bool, int, []byte) {
+       return true, 200, []byte("everything ok!")
+   }
+
+
 Authentication plugin
 ---------------------
 

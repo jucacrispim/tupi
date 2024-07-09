@@ -134,3 +134,12 @@ func GetAuthPlugin(fpath string) (AuthFn, error) {
 	}
 	return nil, errors.New("Auth plugin " + fpath + " not loaded")
 }
+
+// Returns an already loaded "Serve" function of a serve plugin
+func GetServePlugin(fpath string) (ServeFn, error) {
+	if fn, exists := servePluginsCache[fpath]; exists {
+		return fn, nil
+	}
+
+	return nil, errors.New("Serve plugin " + fpath + " not loaded")
+}

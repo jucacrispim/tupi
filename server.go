@@ -132,7 +132,11 @@ func route(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	serveDefaultTupi(w, req, c)
+	if c.ServePlugin == "" {
+		serveDefaultTupi(w, req, c)
+		return
+	}
+	servePlugin(w, req, c)
 }
 
 // Does the default tupi actions, serve and receive files.
@@ -144,6 +148,21 @@ func serveDefaultTupi(w http.ResponseWriter, req *http.Request, c *DomainConfig)
 	} else {
 		showFile(w, req, c)
 	}
+}
+
+func servePlugin(w http.ResponseWriter, req *http.Request, c *DomainConfig) {
+	fn, err := GetServePlugin(c.ServePlugin)
+	if err != nil {
+		// notest
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	domain := getDomainForRequest(req)
+	ok, status, body := fn(req, domain, &c.ServePluginConf)
+	if !ok {
+		http.Error(w, string(body), status)
+	}
+	w.WriteHeader(status)
+	w.Write(body)
 }
 
 func recieveFile(w http.ResponseWriter, req *http.Request, c *DomainConfig) {

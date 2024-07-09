@@ -2,6 +2,11 @@ Changelog
 =========
 
 
+* v0.11.0
+
+  - Auth refactor
+  - Add serve plugins support
+
 * v0.10.1
 
   - Fix bad auth status code
