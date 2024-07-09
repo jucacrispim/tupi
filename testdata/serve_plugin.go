@@ -1,10 +1,16 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+	"strings"
+)
 
-func Serve(r *http.Request, domain string, conf *map[string]any) (bool, int, []byte) {
+func Serve(w http.ResponseWriter, r *http.Request, conf *map[string]any) {
+	domain := strings.Split(r.Host, ":")[0]
 	if domain == "error.req" {
-		return false, 400, []byte("something went wrong")
+		w.WriteHeader(400)
+		w.Write([]byte("something went wrong"))
 	}
-	return true, 200, []byte("serve plugin")
+	w.WriteHeader(200)
+	w.Write([]byte("serve plugin"))
 }

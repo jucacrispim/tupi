@@ -113,6 +113,7 @@ func basicAuth(r *http.Request, fpath string) (bool, int) {
 func authenticate(r *http.Request, conf *DomainConfig) (bool, int) {
 	if conf.AuthPlugin == "" {
 		Debugf("Loading basicAuth")
+		r.Header.Set("AUTH_TYPE", "Basic")
 		return basicAuth(r, conf.HtpasswdFile)
 	}
 	Debugf("Loading auth plugin")

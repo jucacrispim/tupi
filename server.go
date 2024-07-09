@@ -156,13 +156,7 @@ func servePlugin(w http.ResponseWriter, req *http.Request, c *DomainConfig) {
 		// notest
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	domain := getDomainForRequest(req)
-	ok, status, body := fn(req, domain, &c.ServePluginConf)
-	if !ok {
-		http.Error(w, string(body), status)
-	}
-	w.WriteHeader(status)
-	w.Write(body)
+	fn(w, req, &c.ServePluginConf)
 }
 
 func recieveFile(w http.ResponseWriter, req *http.Request, c *DomainConfig) {

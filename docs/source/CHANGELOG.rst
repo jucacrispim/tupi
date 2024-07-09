@@ -2,6 +2,10 @@ Changelog
 =========
 
 
+* v0.12.0
+
+  - Refactor serve plugin
+
 * v0.11.0
 
   - Auth refactor

@@ -25,7 +25,7 @@ import (
 )
 
 type AuthFn func(*http.Request, string, *map[string]any) (bool, int)
-type ServeFn func(*http.Request, string, *map[string]any) (bool, int, []byte)
+type ServeFn func(http.ResponseWriter, *http.Request, *map[string]any)
 
 var authPluginsCache map[string]AuthFn = make(map[string]AuthFn)
 var servePluginsCache map[string]ServeFn = make(map[string]ServeFn)
@@ -115,7 +115,7 @@ func LoadServePlugin(fpath string, domain string, conf *map[string]any) error {
 	if err != nil {
 		return err
 	}
-	fn, ok := s.(func(*http.Request, string, *map[string]any) (bool, int, []byte))
+	fn, ok := s.(func(http.ResponseWriter, *http.Request, *map[string]any))
 	if !ok {
 		return errors.New("Invalid Serve symbol for plugin: " + fpath)
 	}

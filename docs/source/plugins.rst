@@ -21,8 +21,8 @@ Serve plugin
 ------------
 
 To create a serve plugin you must implement a function named ``Serve`` the get
-three params: A reference to ``http.Request``, a domain and a referece to a
-config map and return a bool, a int and a array of bytes with the response body.
+three params: A ``http.ResponseWriter``, a reference to ``http.Request``, a domain and a referece to a
+config map.
 
 .. code-block:: go
 
@@ -30,8 +30,9 @@ config map and return a bool, a int and a array of bytes with the response body.
 
    import "net/http"
 
-   func Serve(r *http.Request, domain string, conf *map[string]any) (bool, int, []byte) {
-       return true, 200, []byte("everything ok!")
+   func Serve(w http.ResponseWriter, r *http.Request, conf *map[string]any) (bool, int, []byte) {
+       w.WriteHeader(200)
+       w.Write([]bytes("everything ok!"))
    }
 
 
