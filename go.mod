@@ -1,8 +1,6 @@
 module github.com/jucacrispim/tupi
 
-go 1.22.0
-
-toolchain go1.23.1
+go 1.20.0
 
 require (
 	github.com/BurntSushi/toml v1.2.1
