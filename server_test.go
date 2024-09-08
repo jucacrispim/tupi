@@ -19,7 +19,6 @@ package tupi
 
 import (
 	"crypto/tls"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -263,7 +262,7 @@ func TestRecieveAndExtract(t *testing.T) {
 	os.MkdirAll(rdir, 0755)
 	defer os.RemoveAll(rdir)
 
-	b, _ := ioutil.ReadFile("./testdata/test.tar.gz")
+	b, _ := os.ReadFile("./testdata/test.tar.gz")
 	pr, boundary, err := createMultipartPipeReader("test.tar.gz", b)
 	if err != nil {
 		t.Errorf("error creating reader")
