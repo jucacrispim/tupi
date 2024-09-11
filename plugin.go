@@ -90,9 +90,6 @@ func LoadAuthPlugin(fpath string, domain string, conf *map[string]any) error {
 		return errors.New("Invalid Authenticate symbol for plugin: " + fpath)
 	}
 
-	if err != nil {
-		return err
-	}
 	authPluginsCache[fpath] = fn
 	return nil
 }
