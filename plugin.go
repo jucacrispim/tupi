@@ -117,9 +117,6 @@ func LoadServePlugin(fpath string, domain string, conf *map[string]any) error {
 		return errors.New("Invalid Serve symbol for plugin: " + fpath)
 	}
 
-	if err != nil {
-		return err
-	}
 	servePluginsCache[fpath] = fn
 	return nil
 }

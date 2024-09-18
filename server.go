@@ -62,7 +62,7 @@ func (s *TupiServer) LoadPlugins() {
 }
 
 func (s *TupiServer) Run() {
-	startServer := getStartServerFn(s)
+	startServer := getStartServerFn()
 	use_ssl := s.Conf.HasSSL()
 	if len(s.Servers) == 1 {
 		startServer(s.Servers[0], use_ssl)
@@ -262,6 +262,7 @@ func getDomainForRequest(req *http.Request) string {
 	domain = strings.ToLower(domain)
 	return domain
 }
+
 func getConfigForRequest(req *http.Request) *DomainConfig {
 	domain := getDomainForRequest(req)
 	if conf, exists := config.Domains[domain]; exists {
@@ -348,7 +349,7 @@ type startServerFn func(server *http.Server, use_ssl bool)
 
 var startServerTestFn startServerFn = nil
 
-func getStartServerFn(s *TupiServer) startServerFn {
+func getStartServerFn() startServerFn {
 	// notest
 	if startServerTestFn != nil {
 		return startServerTestFn
