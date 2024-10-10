@@ -2,6 +2,10 @@ Changelog
 =========
 
 
+* v0.13.0
+
+  - Add alternative port and redir to https config options
+
 * v0.12.0
 
   - Refactor serve plugin
