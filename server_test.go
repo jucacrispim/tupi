@@ -270,7 +270,6 @@ func TestRecieveAndExtract(t *testing.T) {
 
 	dconf := DomainConfig{
 		Host: "0.0.0.0",
-		Port: 8000,
 	}
 	vconf := DomainConfig{
 		RootDir:        rdir,
@@ -465,4 +464,94 @@ func TestTupiServer_ServePlugin_error(t *testing.T) {
 		t.Fatalf("Wrong status for serve plugin %d", w.Code)
 	}
 
+}
+
+func TestSetupServer_AlternatePort(t *testing.T) {
+	dconf := DomainConfig{
+		Host:            "0.0.0.0",
+		Port:            8000,
+		AlternativePort: 8001,
+		RootDir:         "./testdata",
+		Timeout:         300,
+		HtpasswdFile:    "",
+		UploadPath:      "/u/",
+		ExtractPath:     "/e/",
+		MaxUploadSize:   10 << 20,
+		DefaultToIndex:  true,
+	}
+	conf := Config{}
+	conf.Domains = make(map[string]DomainConfig)
+	conf.Domains["default"] = dconf
+	server := SetupServer(conf)
+
+	if len(server.Servers) != 2 {
+		t.Fatalf("Bad servers %d", len(server.Servers))
+	}
+
+	req, _ := http.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+
+	server.Servers[1].Handler.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Fatalf("Bad code %d", w.Code)
+	}
+
+}
+
+func TestSetupServer_RedirToHttps(t *testing.T) {
+
+	var tests = []struct {
+		name     string
+		httpUrl  string
+		httpsUrl string
+	}{
+		{
+			"redir no ports",
+			"http://localhost",
+			"https://localhost",
+		},
+		{
+			"redir no ports",
+			"http://localhost:8001",
+			"https://localhost:8000",
+		},
+	}
+	dconf := DomainConfig{
+		Host:            "0.0.0.0",
+		Port:            8000,
+		AlternativePort: 8001,
+		redirToHttps:    true,
+		RootDir:         "./testdata",
+		Timeout:         300,
+		HtpasswdFile:    "",
+		UploadPath:      "/u/",
+		ExtractPath:     "/e/",
+		MaxUploadSize:   10 << 20,
+		DefaultToIndex:  true,
+	}
+	conf := Config{}
+	conf.Domains = make(map[string]DomainConfig)
+	conf.Domains["default"] = dconf
+	server := SetupServer(conf)
+
+	if len(server.Servers) != 2 {
+		t.Fatalf("Bad servers %d", len(server.Servers))
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req, _ := http.NewRequest("GET", test.httpUrl, nil)
+			w := httptest.NewRecorder()
+
+			server.Servers[1].Handler.ServeHTTP(w, req)
+			if w.Code != 301 {
+				t.Fatalf("Bad code %d", w.Code)
+			}
+
+			if w.Header().Get("Location") != test.httpsUrl {
+				t.Fatalf("bad location %s", w.Header().Get("Location"))
+			}
+
+		})
+	}
 }

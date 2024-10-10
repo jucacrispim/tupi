@@ -105,17 +105,42 @@ func SetupServer(conf Config) TupiServer {
 		Conf: conf,
 	}
 	servers := make([]*http.Server, 0)
+	host := conf.Domains["default"].Host
+	timeout := conf.Domains["default"].Timeout
+	port := conf.Domains["default"].Port
+	redir := conf.Domains["default"].redirToHttps
+	altPort := conf.Domains["default"].AlternativePort
+
 	addr := fmt.Sprintf(
 		"%s:%s",
-		conf.Domains["default"].Host,
-		strconv.FormatInt(int64(conf.Domains["default"].Port), 10))
+		host,
+		strconv.FormatInt(int64(port), 10))
 	server := &http.Server{
 		Addr:         addr,
 		Handler:      handler,
-		ReadTimeout:  time.Duration(conf.Domains["default"].Timeout) * time.Second,
-		WriteTimeout: time.Duration(conf.Domains["default"].Timeout) * time.Second,
+		ReadTimeout:  time.Duration(timeout) * time.Second,
+		WriteTimeout: time.Duration(timeout) * time.Second,
 	}
 	servers = append(servers, server)
+	if altPort > 0 {
+		var altHandler http.Handler
+		if redir {
+			altHandler = logRequest(http.HandlerFunc(redir2https))
+		} else {
+			altHandler = logRequest(http.HandlerFunc(route))
+		}
+		addr := fmt.Sprintf(
+			"%s:%s",
+			host,
+			strconv.FormatInt(int64(altPort), 10))
+		server := &http.Server{
+			Addr:         addr,
+			Handler:      altHandler,
+			ReadTimeout:  time.Duration(timeout) * time.Second,
+			WriteTimeout: time.Duration(timeout) * time.Second,
+		}
+		servers = append(servers, server)
+	}
 	s.Servers = servers
 	s.LoadPlugins()
 	return s
@@ -137,6 +162,18 @@ func route(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	servePlugin(w, req, c)
+}
+
+func redir2https(w http.ResponseWriter, req *http.Request) {
+	loc := strings.Replace(req.URL.String(), "http", "https", 1)
+	conf := getConfigForRequest(req)
+	httpPort := fmt.Sprintf(":%d", conf.AlternativePort)
+	if strings.Index(loc, httpPort) >= 1 {
+		httpsPort := fmt.Sprintf(":%d", conf.Port)
+		loc = strings.Replace(loc, httpPort, httpsPort, 1)
+	}
+	w.WriteHeader(http.StatusMovedPermanently)
+	w.Header().Add("Location", loc)
 }
 
 // Does the default tupi actions, serve and receive files.

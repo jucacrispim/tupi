@@ -30,6 +30,7 @@ import (
 type DomainConfig struct {
 	Host             string
 	Port             int
+	AlternativePort  int
 	RootDir          string
 	Timeout          int
 	HtpasswdFile     string
@@ -47,6 +48,7 @@ type DomainConfig struct {
 	LogLevel         string
 	PreventOverwrite bool
 	AuthMethods      []string
+	redirToHttps     bool
 }
 
 func (c *DomainConfig) HasCert() bool {
@@ -72,6 +74,12 @@ type Config struct {
 }
 
 func (c *Config) Validate() error {
+
+	defaultDomain := c.Domains["default"]
+	if defaultDomain.redirToHttps && defaultDomain.AlternativePort < 1 {
+		return errors.New("Missing can't redir to https without alternative port")
+	}
+
 	for _, v := range c.Domains {
 		if err := v.Validate(); err != nil {
 			return err

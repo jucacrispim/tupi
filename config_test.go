@@ -245,3 +245,15 @@ func TestHasSSL_False(t *testing.T) {
 	}
 
 }
+
+func TestValidate_BadRedirect(t *testing.T) {
+	dconf := DomainConfig{
+		redirToHttps: true,
+	}
+	conf, _ := GetConfig()
+	conf.Domains["default"] = dconf
+	err := conf.Validate()
+	if err == nil {
+		t.Fatalf("Bad validate")
+	}
+}

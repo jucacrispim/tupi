@@ -229,10 +229,39 @@ Here is an example of a config file:
     preventOverwrite = true
     authMethods = ["POST"]
 
+
+Alternative port
+~~~~~~~~~~~~~~~~
+
+Settimg the ``alternativePort`` option in the config file tupi
+will also listen in a port other than default one.
+
+.. code-block:: toml
+
+   ...
+   port: 1234
+   alternativePort: 1235
+   ...
+
+
+Redir http to https
+~~~~~~~~~~~~~~~~~~~
+
+Setting the ``redirToHttps`` option in the config file
+tupi will redirect http requests to https.
+
+The rules for the redirect are as follows:
+
+The url schema will be changed from ``http`` to ``https``.
+If there is a port in the url, the port
+(considered to be the alternivePort) will be replaced
+by the ``port`` config value.
+
+
 .. _virtual-domains:
 
 Virtual Domains
-+++++++++++++++
+~~~~~~~~~~~~~~~
 
 To use virutal domains one need to configure the domains in the config file. Each
 different section of the config file corresponds to a virtual domain handled by tupi.
@@ -240,7 +269,7 @@ different section of the config file corresponds to a virtual domain handled by 
 .. code-block:: toml
 
    [default]
-   port 8080
+   # port 8080
 
    [adomain.net]
    rootDir "/some/dir"
