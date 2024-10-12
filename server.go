@@ -153,6 +153,9 @@ func route(w http.ResponseWriter, req *http.Request) {
 	if shouldAuthenticate(req, c) {
 		ok, status := authenticate(req, c)
 		if !ok {
+			if c.AuthPlugin == "" {
+				w.Header().Set("WWW-Authenticate", "Basic realm=xZsd234-1M82sa")
+			}
 			http.Error(w, "Bad auth", status)
 			return
 		}
