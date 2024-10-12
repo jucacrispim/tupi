@@ -2,6 +2,11 @@ Changelog
 =========
 
 
+* v0.13.1
+
+  - Fix http server for redir to https
+  - Add WWW-Authenticated response header for bad basic auth
+
 * v0.13.0
 
   - Add alternative port and redir to https config options
