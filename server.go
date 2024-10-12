@@ -69,7 +69,7 @@ func (s *TupiServer) Run() {
 	} else {
 		server := s.Servers[0]
 		for _, serv := range s.Servers[1:] {
-			go startServer(serv, use_ssl)
+			go startServer(serv, false)
 		}
 		startServer(server, use_ssl)
 	}
