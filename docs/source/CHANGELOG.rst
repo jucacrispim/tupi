@@ -2,6 +2,11 @@ Changelog
 =========
 
 
+* v0.14.0
+
+  - Pass original ResponseWrite to serve plugin instead
+    of our statusedResponseWriter
+
 * v0.13.1
 
   - Fix http server for redir to https

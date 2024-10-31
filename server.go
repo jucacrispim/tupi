@@ -164,7 +164,8 @@ func route(w http.ResponseWriter, req *http.Request) {
 		serveDefaultTupi(w, req, c)
 		return
 	}
-	servePlugin(w, req, c)
+	wr := w.(*statusedResponseWriter)
+	servePlugin(wr.ResponseWriter, req, c)
 }
 
 func redir2https(w http.ResponseWriter, req *http.Request) {
