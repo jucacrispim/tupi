@@ -1,4 +1,4 @@
-// Copyright 2020, 2023, 2024 Juca Crispim <juca@poraodojuca.dev>
+// Copyright 2020, 2023-2025 Juca Crispim <juca@poraodojuca.dev>
 
 // This file is part of tupi.
 
@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -37,10 +38,30 @@ const indexFile = "index.html"
 var config Config
 var certsCache map[string]tls.Certificate = make(map[string]tls.Certificate, 0)
 
+// StatusedResponseWriter is a respose writer that holds the status code.
+// Used for log purposes.
+type StatusedResponseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+// WriteHeader writes the status code header for a request and stores the
+// status in the writer.
+func (w *StatusedResponseWriter) WriteHeader(code int) {
+	w.status = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
+type RequestError struct {
+	StatusCode int
+	Err        error
+}
+
+// TupiServer is the struct that holds the config and a slice of the http.Server.
+// One http.Server for each port we listen
 type TupiServer struct {
-	Conf Config
-	// We have one server for each port we listen
-	Servers []*http.Server
+	Conf    Config
+	Servers []TupiPortServer
 }
 
 func (s *TupiServer) LoadPlugins() {
@@ -62,32 +83,15 @@ func (s *TupiServer) LoadPlugins() {
 }
 
 func (s *TupiServer) Run() {
-	startServer := getStartServerFn()
-	use_ssl := s.Conf.HasSSL()
 	if len(s.Servers) == 1 {
-		startServer(s.Servers[0], use_ssl)
+		s.Servers[0].Run()
 	} else {
 		server := s.Servers[0]
 		for _, serv := range s.Servers[1:] {
-			go startServer(serv, false)
+			go serv.Run()
 		}
-		startServer(server, use_ssl)
+		server.Run()
 	}
-}
-
-type statusedResponseWriter struct {
-	http.ResponseWriter
-	status int
-}
-
-func (w *statusedResponseWriter) WriteHeader(code int) {
-	w.status = code
-	w.ResponseWriter.WriteHeader(code)
-}
-
-type requestError struct {
-	StatusCode int
-	Err        error
 }
 
 // SetupServer creates a new instance of the tupi
@@ -104,46 +108,45 @@ func SetupServer(conf Config) TupiServer {
 	s := TupiServer{
 		Conf: conf,
 	}
-	servers := make([]*http.Server, 0)
+	servers := make([]TupiPortServer, 0)
 	host := conf.Domains["default"].Host
 	timeout := conf.Domains["default"].Timeout
-	port := conf.Domains["default"].Port
-	redir := conf.Domains["default"].redirToHttps
-	altPort := conf.Domains["default"].AlternativePort
 
-	addr := fmt.Sprintf(
-		"%s:%s",
-		host,
-		strconv.FormatInt(int64(port), 10))
-	server := &http.Server{
-		Addr:         addr,
-		Handler:      handler,
-		ReadTimeout:  time.Duration(timeout) * time.Second,
-		WriteTimeout: time.Duration(timeout) * time.Second,
-	}
-	servers = append(servers, server)
-	if altPort > 0 {
-		var altHandler http.Handler
-		if redir {
-			altHandler = logRequest(http.HandlerFunc(redir2https))
-		} else {
-			altHandler = logRequest(http.HandlerFunc(route))
-		}
+	portsConf := conf.GetPortsConfig()
+	for _, portConf := range portsConf {
 		addr := fmt.Sprintf(
 			"%s:%s",
 			host,
-			strconv.FormatInt(int64(altPort), 10))
+			strconv.FormatInt(int64(portConf.Port), 10))
 		server := &http.Server{
 			Addr:         addr,
-			Handler:      altHandler,
+			Handler:      handler,
 			ReadTimeout:  time.Duration(timeout) * time.Second,
 			WriteTimeout: time.Duration(timeout) * time.Second,
 		}
-		servers = append(servers, server)
+
+		portServer := TupiPortServer{
+			Server: server,
+			UseSSL: portConf.UseSSL,
+		}
+		servers = append(servers, portServer)
 	}
+
 	s.Servers = servers
 	s.LoadPlugins()
 	return s
+}
+
+type startServerFn func(server *http.Server, use_ssl bool)
+
+type TupiPortServer struct {
+	Server *http.Server
+	UseSSL bool
+}
+
+func (s *TupiPortServer) Run() {
+	startFn := getStartServerFn()
+	startFn(s.Server, s.UseSSL)
 }
 
 // Call the default tupi actions or a pluging based
@@ -164,20 +167,8 @@ func route(w http.ResponseWriter, req *http.Request) {
 		serveDefaultTupi(w, req, c)
 		return
 	}
-	wr := w.(*statusedResponseWriter)
+	wr := w.(*StatusedResponseWriter)
 	servePlugin(wr.ResponseWriter, req, c)
-}
-
-func redir2https(w http.ResponseWriter, req *http.Request) {
-	loc := strings.Replace(req.URL.String(), "http", "https", 1)
-	conf := getConfigForRequest(req)
-	httpPort := fmt.Sprintf(":%d", conf.AlternativePort)
-	if strings.Index(loc, httpPort) >= 1 {
-		httpsPort := fmt.Sprintf(":%d", conf.Port)
-		loc = strings.Replace(loc, httpPort, httpsPort, 1)
-	}
-	w.WriteHeader(http.StatusMovedPermanently)
-	w.Header().Add("Location", loc)
 }
 
 // Does the default tupi actions, serve and receive files.
@@ -204,7 +195,7 @@ func recieveFile(w http.ResponseWriter, req *http.Request, c *DomainConfig) {
 
 	reader, err := checkUploadRequest(w, req, c)
 	if err != nil {
-		e, _ := err.(*requestError)
+		e, _ := err.(*RequestError)
 		http.Error(w, string(err.Error()), e.StatusCode)
 		return
 	}
@@ -226,7 +217,7 @@ func recieveFile(w http.ResponseWriter, req *http.Request, c *DomainConfig) {
 func recieveAndExtract(w http.ResponseWriter, req *http.Request, c *DomainConfig) {
 	reader, err := checkUploadRequest(w, req, c)
 	if err != nil {
-		e, _ := err.(*requestError)
+		e, _ := err.(*RequestError)
 		http.Error(w, string(err.Error()), e.StatusCode)
 		return
 	}
@@ -304,6 +295,23 @@ func getDomainForRequest(req *http.Request) string {
 	return domain
 }
 
+func getPortForRequest(req *http.Request) string {
+	if host := req.Host; host != "" {
+		if _, port, err := net.SplitHostPort(host); err == nil {
+			return port
+		}
+	}
+	if addr, ok := req.Context().Value(http.LocalAddrContextKey).(net.Addr); ok {
+		if _, port, err := net.SplitHostPort(addr.String()); err == nil {
+			return port
+		}
+	}
+	if req.TLS != nil || req.URL != nil && req.URL.Scheme == "https" {
+		return "443"
+	}
+	return "80"
+}
+
 func getConfigForRequest(req *http.Request) *DomainConfig {
 	domain := getDomainForRequest(req)
 	if conf, exists := config.Domains[domain]; exists {
@@ -313,7 +321,7 @@ func getConfigForRequest(req *http.Request) *DomainConfig {
 	return &default_confg
 }
 
-func (r *requestError) Error() string {
+func (r *RequestError) Error() string {
 	return fmt.Sprintf("%s", r.Err)
 }
 
@@ -329,7 +337,7 @@ func shouldAuthenticate(req *http.Request, c *DomainConfig) bool {
 func checkUploadRequest(
 	w http.ResponseWriter, req *http.Request,
 	c *DomainConfig) (*multipart.Reader, error) {
-	err := &requestError{}
+	err := &RequestError{}
 
 	if req.Method != "POST" {
 		err.StatusCode = http.StatusMethodNotAllowed
@@ -358,7 +366,7 @@ func checkUploadRequest(
 
 func logRequest(h http.Handler) http.Handler {
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		sw := &statusedResponseWriter{w, http.StatusOK}
+		sw := &StatusedResponseWriter{w, http.StatusOK}
 		h.ServeHTTP(sw, req)
 		remote := getIp(req)
 		path := req.URL.Path
@@ -386,7 +394,6 @@ func isBadRequest(err error) bool {
 }
 
 // for tests
-type startServerFn func(server *http.Server, use_ssl bool)
 
 var startServerTestFn startServerFn = nil
 

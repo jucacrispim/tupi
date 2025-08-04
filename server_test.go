@@ -1,4 +1,4 @@
-// Copyright 2020, 2023, 2024 Juca Crispim <juca@poraodojuca.dev>
+// Copyright 2020, 2023-2025 Juca Crispim <juca@poraodojuca.dev>
 
 // This file is part of tupi.
 
@@ -18,7 +18,9 @@
 package tupi
 
 import (
+	"context"
 	"crypto/tls"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -60,7 +62,7 @@ func TestShowFile_SingleFile(t *testing.T) {
 	for _, test := range tests {
 		req, _ := http.NewRequest(test.method, test.path, nil)
 		w := httptest.NewRecorder()
-		server.Servers[0].Handler.ServeHTTP(w, req)
+		server.Servers[0].Server.Handler.ServeHTTP(w, req)
 		status := w.Code
 		if status != test.status {
 			t.Errorf("got %d, expected %d", status, test.status)
@@ -113,7 +115,7 @@ func TestShowFile_ListDir(t *testing.T) {
 			}
 		}
 		w := httptest.NewRecorder()
-		server.Servers[0].Handler.ServeHTTP(w, req)
+		server.Servers[0].Server.Handler.ServeHTTP(w, req)
 		status := w.Code
 		if status != test.status {
 			t.Errorf("got %d, expected %d", status, test.status)
@@ -157,7 +159,7 @@ func TestShowFile_Authenticated(t *testing.T) {
 			req.SetBasicAuth(test.username, test.password)
 		}
 		w := httptest.NewRecorder()
-		server.Servers[0].Handler.ServeHTTP(w, req)
+		server.Servers[0].Server.Handler.ServeHTTP(w, req)
 		status := w.Code
 		if status != test.status {
 			t.Errorf("got %d, expected %d", status, test.status)
@@ -237,7 +239,7 @@ func TestRecieveFile(t *testing.T) {
 		req.SetBasicAuth(test.user, test.passwd)
 		req.Header.Set("Content-Type", test.ctype+"; boundary="+boundary)
 		w := httptest.NewRecorder()
-		server.Servers[0].Handler.ServeHTTP(w, req)
+		server.Servers[0].Server.Handler.ServeHTTP(w, req)
 		status := w.Code
 		if status != test.status {
 			t.Errorf("got %d, expected %d", status, test.status)
@@ -270,6 +272,7 @@ func TestRecieveAndExtract(t *testing.T) {
 
 	dconf := DomainConfig{
 		Host: "0.0.0.0",
+		Port: 8080,
 	}
 	vconf := DomainConfig{
 		RootDir:        rdir,
@@ -292,7 +295,7 @@ func TestRecieveAndExtract(t *testing.T) {
 		req.SetBasicAuth(test.user, test.passwd)
 		req.Header.Set("Content-Type", test.ctype+"; boundary="+boundary)
 		w := httptest.NewRecorder()
-		server.Servers[0].Handler.ServeHTTP(w, req)
+		server.Servers[0].Server.Handler.ServeHTTP(w, req)
 		status := w.Code
 		if status != test.status {
 			t.Errorf("got %d, expected %d", status, test.status)
@@ -332,7 +335,7 @@ func TestHTTPServer_RunOneServer(t *testing.T) {
 	defer func() {
 		startServerTestFn = nil
 	}()
-	dconf := DomainConfig{}
+	dconf := DomainConfig{Port: 8080}
 	conf := Config{}
 	conf.Domains = make(map[string]DomainConfig)
 	conf.Domains["default"] = dconf
@@ -352,7 +355,7 @@ func TestHTTPServer_RunMultipleServers(t *testing.T) {
 	defer func() {
 		startServerTestFn = nil
 	}()
-	dconf := DomainConfig{}
+	dconf := DomainConfig{Port: 8080}
 	conf := Config{}
 	conf.Domains = make(map[string]DomainConfig)
 	conf.Domains["default"] = dconf
@@ -410,7 +413,7 @@ func TestGetCertificate_VirtualDomain(t *testing.T) {
 }
 
 func TestTupiServer_LoadPlugins(t *testing.T) {
-	aconf := DomainConfig{}
+	aconf := DomainConfig{Port: 8080}
 	aconf.AuthPlugin = "./build/auth_plugin.so"
 	aconf.ServePlugin = "./build/serve_plugin.so"
 	otherconf := DomainConfig{}
@@ -428,7 +431,7 @@ func TestTupiServer_LoadPlugins(t *testing.T) {
 }
 
 func TestTupiServer_ServePlugin(t *testing.T) {
-	dconf := DomainConfig{}
+	dconf := DomainConfig{Port: 8080}
 	dconf.ServePlugin = "./build/serve_plugin.so"
 
 	conf := Config{}
@@ -438,7 +441,7 @@ func TestTupiServer_ServePlugin(t *testing.T) {
 	url := "/serve"
 	req, _ := http.NewRequest("GET", url, nil)
 	w := httptest.NewRecorder()
-	server.Servers[0].Handler.ServeHTTP(w, req)
+	server.Servers[0].Server.Handler.ServeHTTP(w, req)
 
 	if w.Code != 200 {
 		t.Fatalf("Wrong status for serve plugin %d", w.Code)
@@ -447,7 +450,7 @@ func TestTupiServer_ServePlugin(t *testing.T) {
 }
 
 func TestTupiServer_ServePlugin_error(t *testing.T) {
-	dconf := DomainConfig{}
+	dconf := DomainConfig{Port: 8080}
 	dconf.ServePlugin = "./build/serve_plugin.so"
 
 	conf := Config{}
@@ -458,7 +461,7 @@ func TestTupiServer_ServePlugin_error(t *testing.T) {
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Host = "error.req"
 	w := httptest.NewRecorder()
-	server.Servers[0].Handler.ServeHTTP(w, req)
+	server.Servers[0].Server.Handler.ServeHTTP(w, req)
 
 	if w.Code != 400 {
 		t.Fatalf("Wrong status for serve plugin %d", w.Code)
@@ -466,92 +469,65 @@ func TestTupiServer_ServePlugin_error(t *testing.T) {
 
 }
 
-func TestSetupServer_AlternatePort(t *testing.T) {
-	dconf := DomainConfig{
-		Host:            "0.0.0.0",
-		Port:            8000,
-		AlternativePort: 8001,
-		RootDir:         "./testdata",
-		Timeout:         300,
-		HtpasswdFile:    "",
-		UploadPath:      "/u/",
-		ExtractPath:     "/e/",
-		MaxUploadSize:   10 << 20,
-		DefaultToIndex:  true,
-	}
-	conf := Config{}
-	conf.Domains = make(map[string]DomainConfig)
-	conf.Domains["default"] = dconf
-	server := SetupServer(conf)
-
-	if len(server.Servers) != 2 {
-		t.Fatalf("Bad servers %d", len(server.Servers))
-	}
-
-	req, _ := http.NewRequest("GET", "/", nil)
-	w := httptest.NewRecorder()
-
-	server.Servers[1].Handler.ServeHTTP(w, req)
-	if w.Code != 200 {
-		t.Fatalf("Bad code %d", w.Code)
-	}
-
-}
-
-func TestSetupServer_RedirToHttps(t *testing.T) {
-
-	var tests = []struct {
+func TestGetPortForRequest(t *testing.T) {
+	tests := []struct {
 		name     string
-		httpUrl  string
-		httpsUrl string
+		request  *http.Request
+		expected string
 	}{
 		{
-			"redir no ports",
-			"http://localhost",
-			"https://localhost",
+			name: "Host with explicit port",
+			request: &http.Request{
+				Host: "example.com:8080",
+			},
+			expected: "8080",
 		},
 		{
-			"redir no ports",
-			"http://localhost:8001",
-			"https://localhost:8000",
+			name: "No port in Host, fallback to LocalAddr",
+			request: func() *http.Request {
+				req := &http.Request{
+					Host: "example.com",
+				}
+				ctx := context.WithValue(req.Context(), http.LocalAddrContextKey, &net.TCPAddr{
+					IP:   net.IPv4(127, 0, 0, 1),
+					Port: 9090,
+				})
+				return req.WithContext(ctx)
+			}(),
+			expected: "9090",
+		},
+		{
+			name: "No Host, fallback to LocalAddr",
+			request: func() *http.Request {
+				req := &http.Request{}
+				ctx := context.WithValue(req.Context(), http.LocalAddrContextKey, &net.TCPAddr{
+					IP:   net.IPv4(0, 0, 0, 0),
+					Port: 1234,
+				})
+				return req.WithContext(ctx)
+			}(),
+			expected: "1234",
+		},
+		{
+			name: "No Host or LocalAddr, with TLS",
+			request: &http.Request{
+				TLS: &tls.ConnectionState{},
+			},
+			expected: "443",
+		},
+		{
+			name:     "No Host, no LocalAddr, no TLS",
+			request:  &http.Request{},
+			expected: "80",
 		},
 	}
-	dconf := DomainConfig{
-		Host:            "0.0.0.0",
-		Port:            8000,
-		AlternativePort: 8001,
-		redirToHttps:    true,
-		RootDir:         "./testdata",
-		Timeout:         300,
-		HtpasswdFile:    "",
-		UploadPath:      "/u/",
-		ExtractPath:     "/e/",
-		MaxUploadSize:   10 << 20,
-		DefaultToIndex:  true,
-	}
-	conf := Config{}
-	conf.Domains = make(map[string]DomainConfig)
-	conf.Domains["default"] = dconf
-	server := SetupServer(conf)
 
-	if len(server.Servers) != 2 {
-		t.Fatalf("Bad servers %d", len(server.Servers))
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			req, _ := http.NewRequest("GET", test.httpUrl, nil)
-			w := httptest.NewRecorder()
-
-			server.Servers[1].Handler.ServeHTTP(w, req)
-			if w.Code != 301 {
-				t.Fatalf("Bad code %d", w.Code)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			port := getPortForRequest(tt.request)
+			if port != tt.expected {
+				t.Errorf("expected port %q, got %q", tt.expected, port)
 			}
-
-			if w.Header().Get("Location") != test.httpsUrl {
-				t.Fatalf("bad location %s", w.Header().Get("Location"))
-			}
-
 		})
 	}
 }

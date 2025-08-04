@@ -1,5 +1,9 @@
 host = "2.2.2.2"
 port = 1234
+ports = [
+      {"host" = 1234, "usessl" = true},
+      {"host" = 2234, "usessl" = false},
+]
 rootDir = "/some/dir"
 timeout = 500  # seconds
 htpasswdFile = "/some/htpasswd"

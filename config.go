@@ -1,4 +1,4 @@
-// Copyright 2023, 2024 Juca Crispim <juca@poraodojuca.dev>
+// Copyright 2023-2025 Juca Crispim <juca@poraodojuca.dev>
 
 // This file is part of tupi.
 
@@ -20,6 +20,7 @@ package tupi
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"reflect"
 	"strings"
@@ -27,9 +28,18 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+// PortConfig is the configuration for the ports that the server listens.
+// Requests are handled in the basis of host/port
+type PortConfig struct {
+	Port   int
+	UseSSL bool
+}
+
+// DomainConfig is the configuration for a specific domain.
 type DomainConfig struct {
 	Host             string
 	Port             int
+	Ports            []PortConfig
 	AlternativePort  int
 	RootDir          string
 	Timeout          int
@@ -51,17 +61,47 @@ type DomainConfig struct {
 	redirToHttps     bool
 }
 
+// HasCert informs if the DomainConfig has a ssl certificate file path
 func (c *DomainConfig) HasCert() bool {
 	return c.CertFilePath != ""
 }
 
+// HasCert informs if the DomainConfig has a ssl key file path
 func (c *DomainConfig) HasKey() bool {
 	return c.KeyFilePath != ""
 }
 
+func (c *DomainConfig) HasSSL() bool {
+	return c.HasCert() && c.HasKey()
+}
+
+// Validate validates the ports config looking for duplicated configs
+// and if the required ssl configs are present
 func (c *DomainConfig) Validate() error {
+
+	ports := make(map[int]bool)
+	usesSSL := false
+	for _, portConf := range c.Ports {
+		err := errors.New(fmt.Sprintf("Duplicated config for port %d", portConf.Port))
+		if portConf.Port == c.Port {
+			return err
+		}
+		_, exists := ports[portConf.Port]
+		if exists {
+			return err
+		}
+		if portConf.UseSSL {
+			usesSSL = true
+		}
+		ports[portConf.Port] = true
+	}
+
 	has_cert := c.HasCert()
 	has_key := c.HasKey()
+
+	if (!has_cert || !has_key) && usesSSL {
+		return errors.New(fmt.Sprintf("Port conf required ssl, but no ssl confs found"))
+	}
 
 	if (has_cert || has_key) && !(has_cert && has_key) {
 		return errors.New("You must pass certfile and certkey to use ssl")
@@ -69,10 +109,14 @@ func (c *DomainConfig) Validate() error {
 	return nil
 }
 
+// Config is the config all domains. The default config is the config in
+// the `default` key.
 type Config struct {
 	Domains map[string]DomainConfig
 }
 
+// Validate checks if all domains have valid configurations and if there is
+// no conflicting configs
 func (c *Config) Validate() error {
 
 	defaultDomain := c.Domains["default"]
@@ -80,9 +124,17 @@ func (c *Config) Validate() error {
 		return errors.New("Missing can't redir to https without alternative port")
 	}
 
+	usedPorts := make(map[int]bool)
 	for _, v := range c.Domains {
 		if err := v.Validate(); err != nil {
 			return err
+		}
+		for _, portConf := range v.Ports {
+			val, exists := usedPorts[portConf.Port]
+			if exists && val != portConf.UseSSL {
+				return errors.New("conflicting port configs")
+			}
+			usedPorts[portConf.Port] = portConf.UseSSL
 		}
 	}
 	return nil
@@ -95,6 +147,28 @@ func (c *Config) HasSSL() bool {
 		}
 	}
 	return false
+}
+
+// GetPortsConfig returns the a slice of PortConfig for all ports used by the server
+func (c *Config) GetPortsConfig() []PortConfig {
+	confs := make([]PortConfig, 0)
+	used := make(map[int]PortConfig)
+	for _, domain := range c.Domains {
+		defaultPort := PortConfig{Port: domain.Port, UseSSL: domain.HasSSL()}
+		_, exists := used[defaultPort.Port]
+		if !exists && defaultPort.Port > 0 {
+			used[defaultPort.Port] = defaultPort
+			confs = append(confs, defaultPort)
+		}
+		for _, portConf := range domain.Ports {
+			_, exists := used[portConf.Port]
+			if !exists {
+				used[portConf.Port] = portConf
+				confs = append(confs, portConf)
+			}
+		}
+	}
+	return confs
 }
 
 // GetConfig returns the config struct for the server by reading

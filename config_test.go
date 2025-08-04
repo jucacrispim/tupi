@@ -1,4 +1,4 @@
-// Copyright 2023 Juca Crispim <juca@poraodojuca.dev>
+// Copyright 2023-2025 Juca Crispim <juca@poraodojuca.dev>
 
 // This file is part of tupi.
 
@@ -87,7 +87,7 @@ func TestGetConfig_FromFile_InlineTable(t *testing.T) {
 
 	conf, err := GetConfig()
 	if err != nil {
-		t.Fatalf("Errr GetConfigFromFile %s", err.Error())
+		t.Fatalf("Err GetConfigFromFile %s", err.Error())
 	}
 
 	if conf.Domains["default"].Host != "2.2.2.2" {
@@ -109,6 +109,11 @@ func TestGetConfig_FromFile_InlineTable(t *testing.T) {
 	other, _ := cnf["other"].(string)
 	if other != "strange {value\n}" {
 		t.Fatalf("Bad plugin conf %s", other)
+	}
+
+	ports := conf.Domains["default"].Ports
+	if len(ports) != 2 {
+		t.Fatalf("Bad ports %T", ports)
 	}
 }
 
@@ -204,6 +209,91 @@ func TestValidate_WithCertAndKeyFile(t *testing.T) {
 	}
 }
 
+func TestValidate_DuplicatedPortConfig(t *testing.T) {
+	config := DomainConfig{
+		Ports: []PortConfig{
+			{
+				Port:   1234,
+				UseSSL: false,
+			},
+			{
+				Port:   1234,
+				UseSSL: false,
+			},
+		},
+	}
+
+	c := Config{}
+	c.Domains = make(map[string]DomainConfig)
+	c.Domains["default"] = config
+	if c.Validate() == nil {
+		t.Fatalf("It says the config is valid with duplicated ports conf")
+	}
+}
+
+func TestValidate_DuplicatedPortConfigDefaultPort(t *testing.T) {
+	config := DomainConfig{
+		Port: 1234,
+		Ports: []PortConfig{
+			{
+				Port:   1234,
+				UseSSL: false,
+			},
+		},
+	}
+
+	c := Config{}
+	c.Domains = make(map[string]DomainConfig)
+	c.Domains["default"] = config
+	if c.Validate() == nil {
+		t.Fatalf("It says the config is valid with duplicated ports conf")
+	}
+}
+
+func TestValidate_PortConfigOk(t *testing.T) {
+	config := DomainConfig{
+		Ports: []PortConfig{
+			{
+				Port:   1233,
+				UseSSL: false,
+			},
+			{
+				Port:   1234,
+				UseSSL: false,
+			},
+		},
+	}
+
+	c := Config{}
+	c.Domains = make(map[string]DomainConfig)
+	c.Domains["default"] = config
+	if c.Validate() != nil {
+		t.Fatalf("invalid config with distinct ports")
+	}
+}
+
+func TestValidate_PortConfigSSLMissingCert(t *testing.T) {
+	config := DomainConfig{
+		Ports: []PortConfig{
+			{
+				Port:   1233,
+				UseSSL: false,
+			},
+			{
+				Port:   1234,
+				UseSSL: true,
+			},
+		},
+	}
+
+	c := Config{}
+	c.Domains = make(map[string]DomainConfig)
+	c.Domains["default"] = config
+	if c.Validate() == nil {
+		t.Fatalf("It says the config is valid with ports ssl conf without cert or key")
+	}
+}
+
 func TestHasSSL_True(t *testing.T) {
 	old_command := flag.CommandLine
 	testCommandLine = []string{}
@@ -254,6 +344,69 @@ func TestValidate_BadRedirect(t *testing.T) {
 	conf.Domains["default"] = dconf
 	err := conf.Validate()
 	if err == nil {
-		t.Fatalf("Bad validate")
+		t.Fatalf("Bad validate redirect")
+	}
+}
+
+func TestValidate_ConflictingPortConfs(t *testing.T) {
+	dconf1 := DomainConfig{
+		CertFilePath: "some-path",
+		KeyFilePath:  "the other",
+		Ports: []PortConfig{
+			{
+				Port:   1234,
+				UseSSL: false,
+			},
+		},
+	}
+	dconf2 := DomainConfig{
+		CertFilePath: "some-path",
+		KeyFilePath:  "the other",
+		Ports: []PortConfig{
+			{
+				Port:   1234,
+				UseSSL: true,
+			},
+		},
+	}
+	conf := Config{}
+	conf.Domains = make(map[string]DomainConfig)
+	conf.Domains["default"] = dconf1
+	conf.Domains["other"] = dconf2
+	err := conf.Validate()
+	if err == nil {
+		t.Fatalf("Bad validate for conflicting port confs")
+	}
+}
+
+func TestGetPortsConfig(t *testing.T) {
+	dconf1 := DomainConfig{
+		CertFilePath: "some-path",
+		KeyFilePath:  "the other",
+		Ports: []PortConfig{
+			{
+				Port:   1234,
+				UseSSL: false,
+			},
+		},
+	}
+	dconf2 := DomainConfig{
+		Port:         2233,
+		CertFilePath: "some-path",
+		KeyFilePath:  "the other",
+		Ports: []PortConfig{
+			{
+				Port:   1235,
+				UseSSL: true,
+			},
+		},
+	}
+	conf := Config{}
+	conf.Domains = make(map[string]DomainConfig)
+	conf.Domains["default"] = dconf1
+	conf.Domains["other"] = dconf2
+	portsConf := conf.GetPortsConfig()
+	if len(portsConf) != 3 {
+		t.Fatalf("bad confs for GetPortsConfig %+v", portsConf)
 	}
 }
