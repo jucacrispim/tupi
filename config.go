@@ -206,8 +206,10 @@ func GetConfig() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	// here we merge the default config from file with the command line
+	// params. The command line params have precedence over the config file.
 	defaultConf := fileConf.Domains["default"]
-	defaultConf = mergeConfs(defaultConf, cmdConf)
+	defaultConf = mergeConfs(cmdConf, defaultConf)
 	fileConf.Domains["default"] = defaultConf
 	for k, v := range fileConf.Domains {
 		if k == "default" {
@@ -249,28 +251,60 @@ func GetConfigFromCommandLine() DomainConfig {
 	args := getCmdlineArgs()
 	flag.CommandLine.Parse(args)
 
-	var m []string
-	if *authMethods != "" {
-		m = strings.Split(*authMethods, ",")
+	setFields := map[string]bool{}
+	flag.CommandLine.Visit(func(f *flag.Flag) {
+		setFields[f.Name] = true
+	})
+
+	conf := DomainConfig{}
+	if setFields["host"] {
+		conf.Host = *host
+	}
+	if setFields["port"] {
+		conf.Port = *port
+	}
+	if setFields["root"] {
+		conf.RootDir = *rdir
+	}
+	if setFields["timeout"] {
+		conf.Timeout = *timeout
+	}
+	if setFields["htpasswd"] {
+		conf.HtpasswdFile = *htpasswdFile
+	}
+	if setFields["upath"] {
+		conf.UploadPath = *upath
+	}
+	if setFields["epath"] {
+		conf.ExtractPath = *epath
+	}
+	if setFields["maxupload"] {
+		conf.MaxUploadSize = *maxUpload
+	}
+	if setFields["certfile"] {
+		conf.CertFilePath = *certfile
+	}
+	if setFields["keyfile"] {
+		conf.KeyFilePath = *keyfile
+	}
+	if setFields["default-to-index"] {
+		conf.DefaultToIndex = *defaultToIndex
+	}
+	if setFields["conf"] {
+		conf.ConfigFile = *confPath
+	}
+	if setFields["loglevel"] {
+		conf.LogLevel = *logLevel
+	}
+	if setFields["prevent-overwrite"] {
+		conf.PreventOverwrite = *preventOverwrite
+	}
+	if setFields["auth-methods"] {
+		if *authMethods != "" {
+			conf.AuthMethods = strings.Split(*authMethods, ",")
+		}
 	}
 
-	conf := DomainConfig{
-		Host:             *host,
-		Port:             *port,
-		RootDir:          *rdir,
-		Timeout:          *timeout,
-		HtpasswdFile:     *htpasswdFile,
-		UploadPath:       *upath,
-		ExtractPath:      *epath,
-		MaxUploadSize:    *maxUpload,
-		CertFilePath:     *certfile,
-		KeyFilePath:      *keyfile,
-		DefaultToIndex:   *defaultToIndex,
-		ConfigFile:       *confPath,
-		LogLevel:         *logLevel,
-		PreventOverwrite: *preventOverwrite,
-		AuthMethods:      m,
-	}
 	return conf
 }
 

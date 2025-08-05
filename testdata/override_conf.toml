@@ -1,0 +1,16 @@
+[default]
+host = "localhost"
+port = 80
+rootdir = "/fromfile"
+timeout = 123
+htpasswdfile = "/fromfile/.htpasswd"
+uploadpath = "/fromfile/up"
+extractpath = "/fromfile/ex"
+maxuploadsize = 100000
+certfilepath = "/fromfile/cert.pem"
+keyfilepath = "/fromfile/key.pem"
+defaulttoindex = false
+configfile = "/fromfile/tupi.toml"
+loglevel = "warn"
+preventoverwrite = false
+authmethods = ["POST", "PUT"]

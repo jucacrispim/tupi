@@ -90,7 +90,6 @@ func (s *TupiServer) Run() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			Debugf("running server: %+v", serv.Server)
 			err := serv.Run()
 			if err != nil {
 				// notest
