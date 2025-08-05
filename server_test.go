@@ -272,9 +272,9 @@ func TestRecieveAndExtract(t *testing.T) {
 
 	dconf := DomainConfig{
 		Host: "0.0.0.0",
-		Port: 8080,
 	}
 	vconf := DomainConfig{
+		Port:           8080,
 		RootDir:        rdir,
 		Timeout:        300,
 		HtpasswdFile:   fpath,
@@ -291,7 +291,7 @@ func TestRecieveAndExtract(t *testing.T) {
 	for _, test := range tests {
 
 		req, _ := http.NewRequest(test.method, "/e/", pr)
-		req.Host = "localhost"
+		req.Host = "localhost:8080"
 		req.SetBasicAuth(test.user, test.passwd)
 		req.Header.Set("Content-Type", test.ctype+"; boundary="+boundary)
 		w := httptest.NewRecorder()
@@ -473,14 +473,14 @@ func TestGetPortForRequest(t *testing.T) {
 	tests := []struct {
 		name     string
 		request  *http.Request
-		expected string
+		expected int
 	}{
 		{
 			name: "Host with explicit port",
 			request: &http.Request{
 				Host: "example.com:8080",
 			},
-			expected: "8080",
+			expected: 8080,
 		},
 		{
 			name: "No port in Host, fallback to LocalAddr",
@@ -494,7 +494,7 @@ func TestGetPortForRequest(t *testing.T) {
 				})
 				return req.WithContext(ctx)
 			}(),
-			expected: "9090",
+			expected: 9090,
 		},
 		{
 			name: "No Host, fallback to LocalAddr",
@@ -506,25 +506,28 @@ func TestGetPortForRequest(t *testing.T) {
 				})
 				return req.WithContext(ctx)
 			}(),
-			expected: "1234",
+			expected: 1234,
 		},
 		{
 			name: "No Host or LocalAddr, with TLS",
 			request: &http.Request{
 				TLS: &tls.ConnectionState{},
 			},
-			expected: "443",
+			expected: 443,
 		},
 		{
 			name:     "No Host, no LocalAddr, no TLS",
 			request:  &http.Request{},
-			expected: "80",
+			expected: 80,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			port := getPortForRequest(tt.request)
+			port, err := getPortForRequest(tt.request)
+			if err != nil {
+				t.Fatalf("Error getting port for request %s", err.Error())
+			}
 			if port != tt.expected {
 				t.Errorf("expected port %q, got %q", tt.expected, port)
 			}

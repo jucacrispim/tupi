@@ -295,29 +295,40 @@ func getDomainForRequest(req *http.Request) string {
 	return domain
 }
 
-func getPortForRequest(req *http.Request) string {
+func getPortForRequest(req *http.Request) (int, error) {
 	if host := req.Host; host != "" {
 		if _, port, err := net.SplitHostPort(host); err == nil {
-			return port
+			p, err := strconv.Atoi(port)
+			return p, err
 		}
 	}
 	if addr, ok := req.Context().Value(http.LocalAddrContextKey).(net.Addr); ok {
 		if _, port, err := net.SplitHostPort(addr.String()); err == nil {
-			return port
+			p, err := strconv.Atoi(port)
+			return p, err
 		}
 	}
 	if req.TLS != nil || req.URL != nil && req.URL.Scheme == "https" {
-		return "443"
+		return 443, nil
 	}
-	return "80"
+	return 80, nil
 }
 
 func getConfigForRequest(req *http.Request) *DomainConfig {
 	domain := getDomainForRequest(req)
-	if conf, exists := config.Domains[domain]; exists {
-		return &conf
-	}
+	port, err := getPortForRequest(req)
 	default_confg := config.Domains["default"]
+	if err != nil {
+		// notest
+		Errorf("could not get port for request: %s", err.Error())
+		return &default_confg
+
+	}
+	if conf, exists := config.Domains[domain]; exists {
+		if conf.HasPortConf(port) {
+			return &conf
+		}
+	}
 	return &default_confg
 }
 

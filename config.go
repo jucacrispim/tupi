@@ -75,6 +75,18 @@ func (c *DomainConfig) HasSSL() bool {
 	return c.HasCert() && c.HasKey()
 }
 
+func (c *DomainConfig) HasPortConf(port int) bool {
+	if c.Port == port {
+		return true
+	}
+	for _, conf := range c.Ports {
+		if conf.Port == port {
+			return true
+		}
+	}
+	return false
+}
+
 // Validate validates the ports config looking for duplicated configs
 // and if the required ssl configs are present
 func (c *DomainConfig) Validate() error {

@@ -410,3 +410,49 @@ func TestGetPortsConfig(t *testing.T) {
 		t.Fatalf("bad confs for GetPortsConfig %+v", portsConf)
 	}
 }
+
+func TestHasPortConf(t *testing.T) {
+	type getConfFn func() DomainConfig
+	var tests = []struct {
+		testName string
+		getConf  getConfFn
+		hasConf  bool
+	}{
+		{
+			"conf with default port",
+			func() DomainConfig {
+				dconf := DomainConfig{Port: 8080}
+				return dconf
+			},
+			true,
+		},
+		{
+			"conf with ports conf",
+			func() DomainConfig {
+				dconf := DomainConfig{
+					Ports: []PortConfig{{Port: 8080, UseSSL: false}},
+				}
+				return dconf
+			},
+			true,
+		},
+		{
+			"conf without port conf",
+			func() DomainConfig {
+				dconf := DomainConfig{Port: 9080}
+				return dconf
+			},
+			false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.testName, func(t *testing.T) {
+			conf := test.getConf()
+			r := conf.HasPortConf(8080)
+			if r != test.hasConf {
+				t.Fatalf("bad has port conf %t", test.hasConf)
+			}
+		})
+	}
+}
