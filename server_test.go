@@ -329,8 +329,9 @@ func TestRecieveAndExtract(t *testing.T) {
 
 func TestHTTPServer_RunOneServer(t *testing.T) {
 	called := false
-	startServerTestFn = func(s *http.Server, use_ssl bool) {
+	startServerTestFn = func(s *http.Server, use_ssl bool) error {
 		called = true
+		return nil
 	}
 	defer func() {
 		startServerTestFn = nil
@@ -349,8 +350,9 @@ func TestHTTPServer_RunOneServer(t *testing.T) {
 
 func TestHTTPServer_RunMultipleServers(t *testing.T) {
 	called := false
-	startServerTestFn = func(s *http.Server, use_ssl bool) {
+	startServerTestFn = func(s *http.Server, use_ssl bool) error {
 		called = true
+		return nil
 	}
 	defer func() {
 		startServerTestFn = nil

@@ -29,6 +29,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -83,15 +84,21 @@ func (s *TupiServer) LoadPlugins() {
 }
 
 func (s *TupiServer) Run() {
-	if len(s.Servers) == 1 {
-		s.Servers[0].Run()
-	} else {
-		server := s.Servers[0]
-		for _, serv := range s.Servers[1:] {
-			go serv.Run()
-		}
-		server.Run()
+	wg := new(sync.WaitGroup)
+	for _, serv := range s.Servers {
+		serv := serv
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			Debugf("running server: %+v", serv.Server)
+			err := serv.Run()
+			if err != nil {
+				// notest
+				Errorf("server on %s failed: %s", serv.Server.Addr, err.Error())
+			}
+		}()
 	}
+	wg.Wait()
 }
 
 // SetupServer creates a new instance of the tupi
@@ -118,6 +125,7 @@ func SetupServer(conf Config) TupiServer {
 			"%s:%s",
 			host,
 			strconv.FormatInt(int64(portConf.Port), 10))
+		Debugf("new server config: %s", addr)
 		server := &http.Server{
 			Addr:         addr,
 			Handler:      handler,
@@ -137,16 +145,16 @@ func SetupServer(conf Config) TupiServer {
 	return s
 }
 
-type startServerFn func(server *http.Server, use_ssl bool)
+type startServerFn func(server *http.Server, use_ssl bool) error
 
 type TupiPortServer struct {
 	Server *http.Server
 	UseSSL bool
 }
 
-func (s *TupiPortServer) Run() {
+func (s *TupiPortServer) Run() error {
 	startFn := getStartServerFn()
-	startFn(s.Server, s.UseSSL)
+	return startFn(s.Server, s.UseSSL)
 }
 
 // Call the default tupi actions or a pluging based
@@ -413,22 +421,17 @@ func getStartServerFn() startServerFn {
 	if startServerTestFn != nil {
 		return startServerTestFn
 	}
-	startServer := func(server *http.Server, use_ssl bool) {
+	startServer := func(server *http.Server, use_ssl bool) error {
 		if use_ssl {
 			if server.TLSConfig == nil {
 				server.TLSConfig = &tls.Config{}
 			}
 			tls_conf := server.TLSConfig
 			tls_conf.GetCertificate = getCertificate
-			err := server.ListenAndServeTLS("", "")
-			if err != nil {
-				panic(err.Error())
-			}
+			return server.ListenAndServeTLS("", "")
+
 		} else {
-			err := server.ListenAndServe()
-			if err != nil {
-				panic(err.Error())
-			}
+			return server.ListenAndServe()
 		}
 
 	}
