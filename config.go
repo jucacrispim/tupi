@@ -40,7 +40,6 @@ type DomainConfig struct {
 	Host             string
 	Port             int
 	Ports            []PortConfig
-	AlternativePort  int
 	RootDir          string
 	Timeout          int
 	HtpasswdFile     string
@@ -130,11 +129,6 @@ type Config struct {
 // Validate checks if all domains have valid configurations and if there is
 // no conflicting configs
 func (c *Config) Validate() error {
-
-	defaultDomain := c.Domains["default"]
-	if defaultDomain.redirToHttps && defaultDomain.AlternativePort < 1 {
-		return errors.New("Missing can't redir to https without alternative port")
-	}
 
 	usedPorts := make(map[int]bool)
 	for _, v := range c.Domains {

@@ -2,6 +2,10 @@ Changelog
 =========
 
 
+* v0.15.0
+
+  - Add ``ports`` config param for listening on multiple ports.
+
 * v0.14.0
 
   - Pass original ResponseWrite to serve plugin instead

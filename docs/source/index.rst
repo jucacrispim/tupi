@@ -204,8 +204,14 @@ Config file
 +++++++++++
 
 Instead of command line options one can also use a ``toml`` configuration file by
-using the ``-config`` command line option or by setting the ``TUPI_CONFIG_FILE``
+using the ``-conf`` command line option or by setting the ``TUPI_CONFIG_FILE``
 environment variable.
+
+.. note::
+
+   Command line arguments have precedence over values from a config file.
+   The ``-conf`` argument has precedence over the ``TUPI_CONFIG_FILE`` environment variable.
+
 
 Here is an example of a config file:
 
@@ -227,36 +233,29 @@ Here is an example of a config file:
     defaultToIndex = true
     logLevel = "debug"
     preventOverwrite = true
+    # methods that need authentication
     authMethods = ["POST"]
 
 
-Alternative port
-~~~~~~~~~~~~~~~~
+Listening on multiple ports
+===========================
 
-Settimg the ``alternativePort`` option in the config file tupi
-will also listen in a port other than default one.
+In order to listen on multiple ports you need to use the ``ports`` param
+in the config file.
 
 .. code-block:: toml
 
    ...
-   port: 1234
-   alternativePort: 1235
+   ports = [
+       {"port" = 1234, "usessl" = true},
+       {"port" = 2234, "usessl" = false}
+   ]
    ...
 
+.. note::
 
-Redir http to https
-~~~~~~~~~~~~~~~~~~~
-
-Setting the ``redirToHttps`` option in the config file
-tupi will redirect http requests to https.
-
-The rules for the redirect are as follows:
-
-The url schema will be changed from ``http`` to ``https``.
-If there is a port in the url, the port
-(considered to be the alternivePort) will be replaced
-by the ``port`` config value.
-
+   If ``usessl`` is true, the params ``keyFilePath`` an ``certFilePath`` must
+   be set.
 
 .. _virtual-domains:
 
@@ -269,9 +268,18 @@ different section of the config file corresponds to a virtual domain handled by 
 .. code-block:: toml
 
    [default]
-   # port 8080
+   ports = [
+       {"port" = 443, "usessl" = true},
+       {"port" = 80, "usessl" = false}
+   ]
 
    [adomain.net]
+   # Here a request to adomain.net will only be handled by the
+   # adomain.net configs if it is in the port 443. Requests to
+   # the port 80 will be handled by the default confs.
+   ports = [
+       {"port" = 443, "usessl" = true},
+   ]
    rootDir "/some/dir"
    # timeout in seconds
    timeout = 500
@@ -300,8 +308,8 @@ different section of the config file corresponds to a virtual domain handled by 
    defaultToIndex = false
 
 
-All options available ara supported by the virtual domains, except ``host``, ``port``
-and ``loglevel`` that are only available for the default server.
+All options available ara supported by the virtual domains, except ``loglevel``
+that is only available for the default server.
 
 
 Plugins
