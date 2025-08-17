@@ -386,11 +386,13 @@ func logRequest(h http.Handler) http.Handler {
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		sw := &StatusedResponseWriter{w, http.StatusOK}
 		h.ServeHTTP(sw, req)
+		domain := getDomainForRequest(req)
+		port, _ := getPortForRequest(req)
 		remote := getIp(req)
 		path := req.URL.Path
 		method := req.Method
 		ua := req.Header.Get("User-Agent")
-		Infof("%s %s %s %d %s\n", remote, method, path, sw.status, ua)
+		Infof("%s %s %s:%d %s %d %s\n", remote, method, domain, port, path, sw.status, ua)
 	}
 	return http.HandlerFunc(handler)
 }
