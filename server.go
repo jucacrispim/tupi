@@ -160,6 +160,7 @@ func (s *TupiPortServer) Run() error {
 // in the domain config
 func route(w http.ResponseWriter, req *http.Request) {
 	c := getConfigForRequest(req)
+	Debugf("config: %+v", c)
 	if shouldAuthenticate(req, c) {
 		ok, status := authenticate(req, c)
 		if !ok {
@@ -253,6 +254,7 @@ func recieveAndExtract(w http.ResponseWriter, req *http.Request, c *DomainConfig
 
 func showFile(w http.ResponseWriter, req *http.Request, c *DomainConfig) {
 	if req.Method != "GET" {
+		Debugf("Bad method for show file %s", req.Method)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -358,6 +360,7 @@ func checkUploadRequest(
 	err := &RequestError{}
 
 	if req.Method != "POST" {
+		Debugf("bad method for upload %s ", req.Method)
 		err.StatusCode = http.StatusMethodNotAllowed
 		err.Err = errors.New("Method not allowed")
 		return nil, err
