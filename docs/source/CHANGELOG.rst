@@ -2,6 +2,11 @@ Changelog
 =========
 
 
+* v0.15.1
+
+  - Fix DefaultToIndex config by using a pointer to bool allowing the default
+    to be true and some other to be false.
+
 * v0.15.0
 
   - Add ``ports`` config param for listening on multiple ports.
