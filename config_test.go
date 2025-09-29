@@ -136,8 +136,32 @@ func TestGetConfig_FromFile_MultipleDomains(t *testing.T) {
 		t.Fatalf("Bad host GetConfigFromFile %s", conf.Domains["default"].Host)
 	}
 
+	if conf.Domains["default"].DefaultToIndex == nil {
+		t.Fatalf("nil defaultToIndex GetConfigFromFile")
+	}
+
+	if !*conf.Domains["default"].DefaultToIndex {
+		t.Fatalf("bad defaultToIndex GetConfigFromFile %t", *conf.Domains["default"].DefaultToIndex)
+	}
+
+	if conf.Domains["domain"].DefaultToIndex == nil {
+		t.Fatalf("nil defaultToIndex GetConfigFromFile")
+	}
+
+	if !*conf.Domains["domain"].DefaultToIndex {
+		t.Fatalf("bad defaultToIndex GetConfigFromFile %t", *conf.Domains["domain"].DefaultToIndex)
+	}
+
 	if conf.Domains["domain"].Host != "3.3.3.3" {
 		t.Fatalf("Bad host GetConfigFromFile %s", conf.Domains["domain"].Host)
+	}
+
+	if conf.Domains["other.domain"].DefaultToIndex == nil {
+		t.Fatalf("nil defaultToIndex GetConfigFromFile")
+	}
+
+	if *conf.Domains["other.domain"].DefaultToIndex {
+		t.Fatalf("bad defaultToIndex GetConfigFromFile %t", *conf.Domains["other.domain"].DefaultToIndex)
 	}
 
 	if conf.Domains["other.domain"].Host != "4.4.4.4" {
@@ -491,7 +515,7 @@ func TestGetConfig_CommandLineOverride(t *testing.T) {
 	assertEqual(t, conf.MaxUploadSize, int64(900000), "MaxUploadSize")
 	assertEqual(t, conf.CertFilePath, "/cli/cert.pem", "CertFilePath")
 	assertEqual(t, conf.KeyFilePath, "/cli/key.pem", "KeyFilePath")
-	assertEqual(t, conf.DefaultToIndex, true, "DefaultToIndex")
+	assertEqual(t, *conf.DefaultToIndex, true, "DefaultToIndex")
 	assertEqual(t, conf.ConfigFile, "./testdata/override_conf.toml", "ConfigFile")
 	assertEqual(t, conf.LogLevel, "debug", "LogLevel")
 	assertEqual(t, conf.PreventOverwrite, false, "PreventOverwrite")

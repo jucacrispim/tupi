@@ -264,7 +264,7 @@ func showFile(w http.ResponseWriter, req *http.Request, c *DomainConfig) {
 	}
 
 	fpath := req.URL.Path
-	if strings.HasSuffix(fpath, "/") && c.DefaultToIndex {
+	if strings.HasSuffix(fpath, "/") && *c.DefaultToIndex {
 		fpath += indexFile
 	}
 	path := c.RootDir + fpath

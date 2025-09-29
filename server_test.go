@@ -44,6 +44,7 @@ func TestShowFile_SingleFile(t *testing.T) {
 		{"/../server.go", "GET", 400},
 		{"/.../file.txt", "GET", 404},
 	}
+	defaultToIndex := true
 	dconf := DomainConfig{
 		Host:           "0.0.0.0",
 		Port:           8000,
@@ -53,7 +54,7 @@ func TestShowFile_SingleFile(t *testing.T) {
 		UploadPath:     "/u/",
 		ExtractPath:    "/e/",
 		MaxUploadSize:  10 << 20,
-		DefaultToIndex: true,
+		DefaultToIndex: &defaultToIndex,
 	}
 	conf := Config{}
 	conf.Domains = make(map[string]DomainConfig)
@@ -92,6 +93,7 @@ func TestShowFile_ListDir(t *testing.T) {
 		{"/", "GET", 200, nil,
 			map[string]string{"If-Modified-Since": "xx"}},
 	}
+	defaultToIndex := false
 	dconf := DomainConfig{
 		Host:           "0.0.0.0",
 		Port:           8000,
@@ -101,7 +103,7 @@ func TestShowFile_ListDir(t *testing.T) {
 		UploadPath:     "/u/",
 		ExtractPath:    "/e/",
 		MaxUploadSize:  10 << 20,
-		DefaultToIndex: false,
+		DefaultToIndex: &defaultToIndex,
 	}
 	conf := Config{}
 	conf.Domains = make(map[string]DomainConfig)
@@ -137,6 +139,7 @@ func TestShowFile_Authenticated(t *testing.T) {
 		{"/file.txt", 200, "test", "123"},
 		{"/file.txt", 401, "", ""},
 	}
+	defaultToIndex := true
 	dconf := DomainConfig{
 		Host:           "0.0.0.0",
 		Port:           8000,
@@ -146,7 +149,7 @@ func TestShowFile_Authenticated(t *testing.T) {
 		UploadPath:     "/u/",
 		ExtractPath:    "/e/",
 		MaxUploadSize:  10 << 20,
-		DefaultToIndex: true,
+		DefaultToIndex: &defaultToIndex,
 		AuthMethods:    []string{"POST", "GET"},
 	}
 	conf := Config{}
@@ -210,7 +213,7 @@ func TestRecieveFile(t *testing.T) {
 	rdir := "/tmp/tupitest"
 	os.MkdirAll(rdir, 0755)
 	defer os.RemoveAll(rdir)
-
+	defaultToIndex := true
 	dconf := DomainConfig{
 		Host:             "0.0.0.0",
 		Port:             8000,
@@ -220,7 +223,7 @@ func TestRecieveFile(t *testing.T) {
 		UploadPath:       "/u/",
 		ExtractPath:      "/e/",
 		MaxUploadSize:    10 << 20,
-		DefaultToIndex:   true,
+		DefaultToIndex:   &defaultToIndex,
 		PreventOverwrite: true,
 		AuthMethods:      []string{"POST"},
 	}
@@ -273,6 +276,7 @@ func TestRecieveAndExtract(t *testing.T) {
 	dconf := DomainConfig{
 		Host: "0.0.0.0",
 	}
+	defaultToIndex := true
 	vconf := DomainConfig{
 		Port:           8080,
 		RootDir:        rdir,
@@ -281,7 +285,7 @@ func TestRecieveAndExtract(t *testing.T) {
 		UploadPath:     "/u/",
 		ExtractPath:    "/e/",
 		MaxUploadSize:  10 << 20,
-		DefaultToIndex: true,
+		DefaultToIndex: &defaultToIndex,
 	}
 	conf := Config{}
 	conf.Domains = make(map[string]DomainConfig)

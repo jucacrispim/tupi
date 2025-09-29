@@ -48,7 +48,7 @@ type DomainConfig struct {
 	MaxUploadSize    int64
 	CertFilePath     string
 	KeyFilePath      string
-	DefaultToIndex   bool
+	DefaultToIndex   *bool
 	ConfigFile       string
 	AuthPlugin       string
 	AuthPluginConf   map[string]interface{}
@@ -201,7 +201,8 @@ func GetConfig() (Config, error) {
 		return Config{}, err
 	}
 	// here we merge the default config from file with the command line
-	// params. The command line params have precedence over the config file.
+	// params. The command line params have precedence over the default
+	// config in the file.
 	defaultConf := fileConf.Domains["default"]
 	defaultConf = mergeConfs(cmdConf, defaultConf)
 	fileConf.Domains["default"] = defaultConf
@@ -282,7 +283,7 @@ func GetConfigFromCommandLine() DomainConfig {
 		conf.KeyFilePath = *keyfile
 	}
 	if setFields["default-to-index"] {
-		conf.DefaultToIndex = *defaultToIndex
+		conf.DefaultToIndex = defaultToIndex
 	}
 	if setFields["conf"] {
 		conf.ConfigFile = *confPath
