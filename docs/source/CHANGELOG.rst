@@ -2,6 +2,11 @@ Changelog
 =========
 
 
+* v0.16.0
+
+  - Fix config precedence. Config files now have precedence over command
+    line parameters
+
 * v0.15.1
 
   - Fix DefaultToIndex config by using a pointer to bool allowing the default
