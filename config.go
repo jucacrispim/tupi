@@ -201,10 +201,9 @@ func GetConfig() (Config, error) {
 		return Config{}, err
 	}
 	// here we merge the default config from file with the command line
-	// params. The command line params have precedence over the default
-	// config in the file.
+	// params. The file config has precedence over command line args
 	defaultConf := fileConf.Domains["default"]
-	defaultConf = mergeConfs(cmdConf, defaultConf)
+	defaultConf = mergeConfs(defaultConf, cmdConf)
 	fileConf.Domains["default"] = defaultConf
 	for k, v := range fileConf.Domains {
 		if k == "default" {
@@ -252,53 +251,21 @@ func GetConfigFromCommandLine() DomainConfig {
 	})
 
 	conf := DomainConfig{}
-	if setFields["host"] {
-		conf.Host = *host
-	}
-	if setFields["port"] {
-		conf.Port = *port
-	}
-	if setFields["root"] {
-		conf.RootDir = *rdir
-	}
-	if setFields["timeout"] {
-		conf.Timeout = *timeout
-	}
-	if setFields["htpasswd"] {
-		conf.HtpasswdFile = *htpasswdFile
-	}
-	if setFields["upath"] {
-		conf.UploadPath = *upath
-	}
-	if setFields["epath"] {
-		conf.ExtractPath = *epath
-	}
-	if setFields["maxupload"] {
-		conf.MaxUploadSize = *maxUpload
-	}
-	if setFields["certfile"] {
-		conf.CertFilePath = *certfile
-	}
-	if setFields["keyfile"] {
-		conf.KeyFilePath = *keyfile
-	}
-	if setFields["default-to-index"] {
-		conf.DefaultToIndex = defaultToIndex
-	}
-	if setFields["conf"] {
-		conf.ConfigFile = *confPath
-	}
-	if setFields["loglevel"] {
-		conf.LogLevel = *logLevel
-	}
-	if setFields["prevent-overwrite"] {
-		conf.PreventOverwrite = *preventOverwrite
-	}
-	if setFields["auth-methods"] {
-		if *authMethods != "" {
-			conf.AuthMethods = strings.Split(*authMethods, ",")
-		}
-	}
+	conf.Host = *host
+	conf.Port = *port
+	conf.RootDir = *rdir
+	conf.Timeout = *timeout
+	conf.HtpasswdFile = *htpasswdFile
+	conf.UploadPath = *upath
+	conf.ExtractPath = *epath
+	conf.MaxUploadSize = *maxUpload
+	conf.CertFilePath = *certfile
+	conf.KeyFilePath = *keyfile
+	conf.DefaultToIndex = defaultToIndex
+	conf.ConfigFile = *confPath
+	conf.LogLevel = *logLevel
+	conf.PreventOverwrite = *preventOverwrite
+	conf.AuthMethods = strings.Split(*authMethods, ",")
 
 	return conf
 }

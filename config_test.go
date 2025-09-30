@@ -21,7 +21,6 @@ import (
 	"flag"
 	"os"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -49,6 +48,10 @@ func TestGetConfig_FromCommandLine(t *testing.T) {
 	if !reflect.DeepEqual(conf.Domains["default"].AuthMethods, []string{"POST", "GET"}) {
 		t.Fatalf("Bad auth methods %s", conf.Domains["default"].AuthMethods)
 	}
+	if conf.Domains["default"].UploadPath != "/u/" {
+		t.Fatalf("Bad upload path GetConfigFromCommandLine %s", conf.Domains["default"].UploadPath)
+	}
+
 }
 
 func TestGetConfig_FromFile(t *testing.T) {
@@ -65,7 +68,7 @@ func TestGetConfig_FromFile(t *testing.T) {
 		t.Fatalf("Errr GetConfigFromFile %s", err.Error())
 	}
 
-	if conf.Domains["default"].Host != "1.1.1.1" {
+	if conf.Domains["default"].Host != "2.2.2.2" {
 		t.Fatalf("Bad host GetConfigFromFile %s", conf.Domains["default"].Host)
 	}
 
@@ -91,7 +94,7 @@ func TestGetConfig_FromFile_InlineTable(t *testing.T) {
 		t.Fatalf("Err GetConfigFromFile %s", err.Error())
 	}
 
-	if conf.Domains["default"].Host != "1.1.1.1" {
+	if conf.Domains["default"].Host != "2.2.2.2" {
 		t.Fatalf("Bad host GetConfigFromFile %s", conf.Domains["default"].Host)
 	}
 
@@ -467,75 +470,5 @@ func TestHasPortConf(t *testing.T) {
 				t.Fatalf("bad has port conf %t", test.hasConf)
 			}
 		})
-	}
-}
-
-func TestGetConfig_CommandLineOverride(t *testing.T) {
-
-	defer os.Unsetenv("TUPI_CONFIG_FILE")
-
-	old_command := flag.CommandLine
-	testCommandLine = []string{
-		"-host=127.0.0.1",
-		"-port=443",
-		"-root=/cli",
-		"-timeout=456",
-		"-htpasswd=/cli/.htpasswd",
-		"-upath=/cli/up",
-		"-epath=/cli/ex",
-		"-maxupload=900000",
-		"-certfile=/cli/cert.pem",
-		"-keyfile=/cli/key.pem",
-		"-default-to-index",
-		"-loglevel=debug",
-		"-conf=./testdata/override_conf.toml",
-		"-prevent-overwrite=false",
-		"-auth-methods=GET,HEAD",
-	}
-
-	flag.CommandLine = flag.NewFlagSet("tupi", flag.ExitOnError)
-	defer func() {
-		testCommandLine = nil
-		flag.CommandLine = old_command
-	}()
-
-	cfg, err := GetConfig()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	conf := cfg.Domains["default"]
-
-	assertEqual(t, conf.Host, "127.0.0.1", "Host")
-	assertEqual(t, conf.Port, 443, "Port")
-	assertEqual(t, conf.RootDir, "/cli", "RootDir")
-	assertEqual(t, conf.Timeout, 456, "Timeout")
-	assertEqual(t, conf.HtpasswdFile, "/cli/.htpasswd", "HtpasswdFile")
-	assertEqual(t, conf.UploadPath, "/cli/up", "UploadPath")
-	assertEqual(t, conf.ExtractPath, "/cli/ex", "ExtractPath")
-	assertEqual(t, conf.MaxUploadSize, int64(900000), "MaxUploadSize")
-	assertEqual(t, conf.CertFilePath, "/cli/cert.pem", "CertFilePath")
-	assertEqual(t, conf.KeyFilePath, "/cli/key.pem", "KeyFilePath")
-	assertEqual(t, *conf.DefaultToIndex, true, "DefaultToIndex")
-	assertEqual(t, conf.ConfigFile, "./testdata/override_conf.toml", "ConfigFile")
-	assertEqual(t, conf.LogLevel, "debug", "LogLevel")
-	assertEqual(t, conf.PreventOverwrite, false, "PreventOverwrite")
-	assertStringSliceEqual(t, conf.AuthMethods, []string{"GET", "HEAD"}, "AuthMethods")
-}
-
-func assertEqual[T comparable](t *testing.T, got, want T, name string) {
-	if got != want {
-		t.Errorf("%s: got %v, want %v", name, got, want)
-	}
-}
-
-func assertStringSliceEqual(t *testing.T, got, want []string, name string) {
-	if len(got) != len(want) {
-		t.Errorf("%s: slice length mismatch: got %d, want %d", name, len(got), len(want))
-		return
-	}
-	for i := range got {
-		if strings.TrimSpace(got[i]) != strings.TrimSpace(want[i]) {
-			t.Errorf("%s[%d]: got %q, want %q", name, i, got[i], want[i])
-		}
 	}
 }
