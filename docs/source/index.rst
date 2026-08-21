@@ -237,6 +237,39 @@ Here is an example of a config file:
     authMethods = ["POST"]
 
 
+Path-specific Configuration
+---------------------------
+
+Tupi allows you to override certain configuration parameters for specific URL paths.
+This is useful if you want to serve different directories or apply different timeouts
+to different parts of your site.
+
+These are defined as separate sections starting with the path.
+
+.. code-block:: toml
+
+    [default]
+    rootDir = "/var/www"
+    timeout = 300
+
+    [[/api]]
+    rootDir = "/var/api"
+    timeout = 10
+
+    [[/static]]
+    rootDir = "/var/static"
+    timeout = 60
+
+In this example, requests starting with ``/api`` will be served from ``/var/api``
+with a 10-second timeout, while others will use the default settings. If multiple
+paths match, the longest matching prefix is used.
+
+.. note::
+
+   Not all parameters can be overridden. For security and technical reasons,
+   parameters like ``port`` and ``certFilePath`` are ignored in path configurations.
+
+
 Listening on multiple ports
 ===========================
 
