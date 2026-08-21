@@ -452,7 +452,6 @@ func TestTupiServer_ServePlugin(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("Wrong status for serve plugin %d", w.Code)
 	}
-
 }
 
 func TestTupiServer_ServePlugin_error(t *testing.T) {
@@ -472,7 +471,6 @@ func TestTupiServer_ServePlugin_error(t *testing.T) {
 	if w.Code != 400 {
 		t.Fatalf("Wrong status for serve plugin %d", w.Code)
 	}
-
 }
 
 func TestGetPortForRequest(t *testing.T) {
@@ -536,6 +534,100 @@ func TestGetPortForRequest(t *testing.T) {
 			}
 			if port != tt.expected {
 				t.Errorf("expected port %q, got %q", tt.expected, port)
+			}
+		})
+	}
+}
+
+func TestGetConfigForRequest(t *testing.T) {
+	// Setup global config for the test
+	oldConfig := config
+	defer func() { config = oldConfig }()
+
+	c := Config{}
+	c.Domains = make(map[string]DomainConfig)
+
+	// Default config
+	c.Domains["default"] = DomainConfig{
+		Host:    "0.0.0.0",
+		RootDir: "/default_root",
+	}
+
+	// Domain with path configs
+	c.Domains["example.com"] = DomainConfig{
+		Host:    "example.com",
+		RootDir: "/example_root",
+		PathConfigs: map[string]DomainConfig{
+			"/api": {
+				RootDir: "/api_root",
+			},
+			"/api/v1": {
+				RootDir: "/v1_root",
+			},
+		},
+	}
+
+	// Domain with specific port to test port mismatch fallback
+	c.Domains["port-test.com"] = DomainConfig{
+		Host:    "port-test.com",
+		Port:    8080,
+		RootDir: "/port_root",
+	}
+
+	config = c
+
+	tests := []struct {
+		name           string
+		host           string
+		path           string
+		expectedRootDir string
+	}{
+		{
+			name:           "Fallback to default domain",
+			host:           "unknown.com",
+			path:           "/any",
+			expectedRootDir: "/default_root",
+		},
+		{
+			name:           "Exact domain match, no path match",
+			host:           "example.com",
+			path:           "/home",
+			expectedRootDir: "/example_root",
+		},
+		{
+			name:           "Path match - shortest prefix",
+			host:           "example.com",
+			path:           "/api/test",
+			expectedRootDir: "/api_root",
+		},
+		{
+			name:           "Path match - longest prefix (best match)",
+			host:           "example.com",
+			path:           "/api/v1/users",
+			expectedRootDir: "/v1_root",
+		},
+		{
+			name:           "Domain match, port match",
+			host:           "port-test.com:8080",
+			path:           "/any",
+			expectedRootDir: "/port_root",
+		},
+		{
+			name:           "Domain match, port mismatch (fallback to default)",
+			host:           "port-test.com:9090",
+			path:           "/any",
+			expectedRootDir: "/default_root",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, _ := http.NewRequest("GET", tt.path, nil)
+			req.Host = tt.host
+			
+			resConf := getConfigForRequest(req)
+			if resConf.RootDir != tt.expectedRootDir {
+				t.Errorf("expected RootDir %s, got %s", tt.expectedRootDir, resConf.RootDir)
 			}
 		})
 	}

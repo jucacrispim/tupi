@@ -200,6 +200,48 @@ func TestGetConfig_FromFile_EnvVar(t *testing.T) {
 	}
 }
 
+func TestGetConfig_FromFile_PathConfigs(t *testing.T) {
+	old_command := flag.CommandLine
+	testCommandLine = []string{"-conf", "./testdata/path_conf.toml"}
+	flag.CommandLine = flag.NewFlagSet("tupi", flag.ExitOnError)
+	defer func() {
+		testCommandLine = nil
+		flag.CommandLine = old_command
+	}()
+
+	conf, err := GetConfig()
+	if err != nil {
+		t.Fatalf("Err GetConfigFromFile PathConfigs %s", err.Error())
+	}
+
+	defaultConf := conf.Domains["default"]
+	if len(defaultConf.PathConfigs) != 2 {
+		t.Fatalf("Expected 2 path configs, got %d", len(defaultConf.PathConfigs))
+	}
+
+	apiConf, ok := defaultConf.PathConfigs["/api"]
+	if !ok {
+		t.Fatalf("Missing /api path config")
+	}
+	if apiConf.RootDir != "/api_dir" {
+		t.Errorf("Expected /api RootDir /api_dir, got %s", apiConf.RootDir)
+	}
+	if apiConf.Timeout != 10 {
+		t.Errorf("Expected /api Timeout 10, got %d", apiConf.Timeout)
+	}
+
+	staticConf, ok := defaultConf.PathConfigs["/static"]
+	if !ok {
+		t.Fatalf("Missing /static path config")
+	}
+	if staticConf.RootDir != "/static_dir" {
+		t.Errorf("Expected /static RootDir /static_dir, got %s", staticConf.RootDir)
+	}
+	if staticConf.Timeout != 60 {
+		t.Errorf("Expected /static Timeout 60, got %d", staticConf.Timeout)
+	}
+}
+
 func TestValidate_MissingCertFile(t *testing.T) {
 	config := DomainConfig{
 		KeyFilePath: "some path",
@@ -470,5 +512,48 @@ func TestHasPortConf(t *testing.T) {
 				t.Fatalf("bad has port conf %t", test.hasConf)
 			}
 		})
+	}
+}
+
+func TestMergePathConf(t *testing.T) {
+	base := DomainConfig{
+		RootDir:      "/base",
+		Port:         8080,
+		CertFilePath: "/base/cert",
+		MaxUploadSize: 100,
+	}
+	path := DomainConfig{
+		RootDir:      "/override",
+		Port:         9090, // Forbidden
+		CertFilePath: "/override/cert", // Forbidden
+		MaxUploadSize: 500,
+	}
+	merged := mergePathConf(path, base)
+
+	if merged.RootDir != "/override" {
+		t.Errorf("Expected RootDir /override, got %s", merged.RootDir)
+	}
+	if merged.Port != 8080 {
+		t.Errorf("Expected Port 8080 (forbidden override), got %d", merged.Port)
+	}
+	if merged.CertFilePath != "/base/cert" {
+		t.Errorf("Expected CertFilePath /base/cert (forbidden override), got %s", merged.CertFilePath)
+	}
+	if merged.MaxUploadSize != 500 {
+		t.Errorf("Expected MaxUploadSize 500, got %d", merged.MaxUploadSize)
+	}
+}
+
+func TestValidate_PathConfigError(t *testing.T) {
+	config := DomainConfig{
+		PathConfigs: map[string]DomainConfig{
+			"/bad": {
+				Ports: []PortConfig{{Port: 1234, UseSSL: true}},
+				// Missing cert/key should trigger error in Validate()
+			},
+		},
+	}
+	if config.Validate() == nil {
+		t.Fatalf("Expected error for invalid path config, but got nil")
 	}
 }

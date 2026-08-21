@@ -1,0 +1,11 @@
+[default]
+host = "1.1.1.1"
+rootDir = "/base"
+
+[[/api]]
+rootDir = "/api_dir"
+timeout = 10
+
+[[/static]]
+rootDir = "/static_dir"
+timeout = 60

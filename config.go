@@ -58,6 +58,7 @@ type DomainConfig struct {
 	PreventOverwrite bool
 	AuthMethods      []string
 	redirToHttps     bool
+	PathConfigs      map[string]DomainConfig
 }
 
 // HasCert informs if the DomainConfig has a ssl certificate file path
@@ -117,6 +118,13 @@ func (c *DomainConfig) Validate() error {
 	if (has_cert || has_key) && !(has_cert && has_key) {
 		return errors.New("You must pass certfile and certkey to use ssl")
 	}
+
+	for path, pConf := range c.PathConfigs {
+		if err := pConf.Validate(); err != nil {
+			return fmt.Errorf("error in path config %s: %w", path, err)
+		}
+	}
+
 	return nil
 }
 
@@ -278,12 +286,24 @@ func GetConfigFromFile(fpath string) (Config, error) {
 	rawConf := string(bytes)
 	c := Config{}
 	c.Domains = make(map[string]DomainConfig)
-	confs := getDomainRawConfs(rawConf)
-	for domain, raw := range confs {
+	confsRaw := getDomainRawConfs(rawConf)
+	for domain, raw := range confsRaw {
 		conf := DomainConfig{}
-		_, err := toml.Decode(raw, &conf)
+		_, err := toml.Decode(raw.main, &conf)
 		if err != nil {
 			return Config{}, err
+		}
+
+		if len(raw.paths) > 0 {
+			conf.PathConfigs = make(map[string]DomainConfig)
+			for path, pathRaw := range raw.paths {
+				pConf := DomainConfig{}
+				_, err := toml.Decode(pathRaw, &pConf)
+				if err != nil {
+					return Config{}, err
+				}
+				conf.PathConfigs[path] = pConf
+			}
 		}
 		c.Domains[domain] = conf
 	}
@@ -306,6 +326,38 @@ func mergeConfs(confA DomainConfig, confB DomainConfig) DomainConfig {
 	return confB
 }
 
+// mergePathConf merges a path configuration over a base configuration.
+// It explicitly prevents overriding Port, CertFilePath, KeyFilePath and Ports.
+func mergePathConf(pathConf DomainConfig, baseConf DomainConfig) DomainConfig {
+	forbidden := map[string]bool{
+		"Port":         true,
+		"CertFilePath": true,
+		"KeyFilePath":  true,
+		"Ports":        true,
+	}
+
+	valA := reflect.ValueOf(pathConf)
+	valB := reflect.ValueOf(&baseConf).Elem()
+	for i := 0; i < valA.NumField(); i++ {
+		name := valA.Type().Field(i).Name
+		if forbidden[name] {
+			continue
+		}
+		aField := valA.Field(i)
+		if !aField.IsZero() {
+			f := valB.FieldByName(name)
+			val := aField
+			f.Set(val)
+		}
+	}
+	return baseConf
+}
+
+type domainRaw struct {
+	main  string
+	paths map[string]string
+}
+
 // what we do here is a kind of hack before sending
 // the config to the toml parser.
 // First we split the contents in different sections (marked by a
@@ -316,10 +368,14 @@ func mergeConfs(confA DomainConfig, confB DomainConfig) DomainConfig {
 // because toml does not accept new lines inside inline tables but
 // I want to be able to write them with new lines.
 // Check the documentation for the conf syntax.
-func getDomainRawConfs(rawConf string) map[string]string {
-	confs := make(map[string]string, 0)
-	conf := ""
+func getDomainRawConfs(rawConf string) map[string]*domainRaw {
+	confs := make(map[string]*domainRaw, 0)
 	domain := "default"
+	currentPath := ""
+
+	// Initialize default domain to avoid nil pointer dereference if file starts without a section
+	confs[domain] = &domainRaw{paths: make(map[string]string)}
+
 	// boring stuff to remove lf cr from inline tables
 	lf := '\n'
 	cr := '\r'
@@ -334,12 +390,14 @@ func getDomainRawConfs(rawConf string) map[string]string {
 	openedTables := 0
 
 	for _, line := range strings.Split(rawConf, "\n") {
-		if strings.HasPrefix(line, "[") {
-			if conf != "" {
-				confs[domain] = conf
-				conf = ""
-			}
+		if strings.HasPrefix(line, "[[") {
+			currentPath = strings.Trim(line, "[]")
+		} else if strings.HasPrefix(line, "[") {
 			domain = strings.Trim(line, "[]")
+			currentPath = ""
+			if _, exists := confs[domain]; !exists {
+				confs[domain] = &domainRaw{paths: make(map[string]string)}
+			}
 		} else {
 			newLineBytes := make([]byte, 0)
 			for i, chr := range line {
@@ -384,13 +442,19 @@ func getDomainRawConfs(rawConf string) map[string]string {
 				// replace line feed or carriage return by nothing
 				// newLineBytes = append(newLineBytes, byte(0))
 			}
-			conf += string(newLineBytes)
+
+			content := string(newLineBytes)
 			if !insideTable {
-				conf += string(lf)
+				content += string(lf)
+			}
+
+			if currentPath != "" {
+				confs[domain].paths[currentPath] += content
+			} else {
+				confs[domain].main += content
 			}
 		}
 	}
-	confs[domain] = conf
 	return confs
 }
 

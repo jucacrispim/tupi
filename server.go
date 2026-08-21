@@ -333,12 +333,34 @@ func getConfigForRequest(req *http.Request) *DomainConfig {
 		return &default_confg
 
 	}
+
+	var baseConf DomainConfig
 	if conf, exists := config.Domains[domain]; exists {
-		if conf.HasPortConf(port) {
-			return &conf
+		if conf.Port == 0 || conf.HasPortConf(port) {
+			baseConf = conf
+		} else {
+			baseConf = default_confg
+		}
+	} else {
+		baseConf = default_confg
+	}
+
+	// Check for path-specific configuration overrides
+	var bestMatch string
+	for path := range baseConf.PathConfigs {
+		if strings.HasPrefix(req.URL.Path, path) {
+			if len(path) > len(bestMatch) {
+				bestMatch = path
+			}
 		}
 	}
-	return &default_confg
+
+	if bestMatch != "" {
+		merged := mergePathConf(baseConf.PathConfigs[bestMatch], baseConf)
+		return &merged
+	}
+
+	return &baseConf
 }
 
 func (r *RequestError) Error() string {

@@ -40,3 +40,4 @@ docs/source/apidoc/
 /c.out
 /coverage.html
 /coverage.out
+.aider*
