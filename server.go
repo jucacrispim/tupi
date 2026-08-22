@@ -38,6 +38,7 @@ const indexFile = "index.html"
 
 var config Config
 var certsCache map[string]tls.Certificate = make(map[string]tls.Certificate, 0)
+var certsCacheMu sync.RWMutex
 
 // StatusedResponseWriter is a respose writer that holds the status code.
 // Used for log purposes.
@@ -275,23 +276,51 @@ func showFile(w http.ResponseWriter, req *http.Request, c *DomainConfig) {
 // Returns a certificate based on the host config.
 func getCertificate(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	domain := info.ServerName
-	if cert, exists := certsCache[domain]; exists {
+
+	certsCacheMu.RLock()
+	cert, exists := certsCache[domain]
+	certsCacheMu.RUnlock()
+	if exists {
 		return &cert, nil
 	}
+
 	conf, exists := config.Domains[domain]
 	if !exists {
 		conf = config.Domains["default"]
 	}
+
 	AcquireLock(domain)
 	defer ReleaseLock(domain)
-	// check if the cert was created while waiting for the lock
-	if cert, exists := certsCache[domain]; exists {
-		// notest
+
+	// Check again after acquiring the domain lock
+	certsCacheMu.RLock()
+	cert, exists = certsCache[domain]
+	certsCacheMu.RUnlock()
+	if exists {
 		return &cert, nil
 	}
+
 	cert, err := tls.LoadX509KeyPair(conf.CertFilePath, conf.KeyFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	certsCacheMu.Lock()
 	certsCache[domain] = cert
-	return &cert, err
+	certsCacheMu.Unlock()
+
+	return &cert, nil
+}
+
+// ReloadCertificates clears the in-memory certificate cache.
+// It should be called after certificate renewal, for example
+// by a Certbot deploy hook via SIGHUP.
+func ReloadCertificates() {
+	certsCacheMu.Lock()
+	defer certsCacheMu.Unlock()
+
+	certsCache = make(map[string]tls.Certificate)
+	Infof("Certificates reloaded")
 }
 
 func setConfig(conf Config) {

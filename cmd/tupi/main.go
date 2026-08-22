@@ -65,6 +65,9 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/jucacrispim/tupi"
 )
@@ -81,5 +84,14 @@ func main() {
 	fmt.Println("Tupi is running! ")
 
 	server := tupi.SetupServer(conf)
+
+	go func() {
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGHUP)
+		for range sigCh {
+			tupi.ReloadCertificates()
+		}
+	}()
+
 	server.Run()
 }

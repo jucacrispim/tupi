@@ -18,13 +18,22 @@
 package tupi
 
 import (
+	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -418,6 +427,38 @@ func TestGetCertificate_VirtualDomain(t *testing.T) {
 	}
 }
 
+func TestGetCertificate_CacheHit(t *testing.T) {
+	setupCertTest(t)
+
+	domain := "cachehit.example.com"
+	dir := t.TempDir()
+	certPath, keyPath, _ := writeTestCertificate(t, dir, domain)
+
+	config.Domains = map[string]DomainConfig{
+		domain: {
+			CertFilePath: certPath,
+			KeyFilePath:  keyPath,
+		},
+	}
+
+	info := &tls.ClientHelloInfo{ServerName: domain}
+
+	// First call loads from disk and populates the cache
+	_, err := getCertificate(info)
+	if err != nil {
+		t.Fatalf("first call failed: %v", err)
+	}
+
+	// Second call should find the certificate in cache (covers the if exists)
+	cert, err := getCertificate(info)
+	if err != nil {
+		t.Fatalf("second call failed: %v", err)
+	}
+	if cert == nil {
+		t.Fatal("certificate returned from cache is nil")
+	}
+}
+
 func TestTupiServer_LoadPlugins(t *testing.T) {
 	aconf := DomainConfig{Port: 8080}
 	aconf.AuthPlugin = "./build/auth_plugin.so"
@@ -631,4 +672,191 @@ func TestGetConfigForRequest(t *testing.T) {
 			}
 		})
 	}
+}
+
+// setupCertTest isolates the global state used by certificate tests.
+func setupCertTest(t *testing.T) {
+	t.Helper()
+
+	oldCache := certsCache
+	oldConfig := config
+	oldLevel := currentLogLevel
+
+	certsCache = make(map[string]tls.Certificate)
+	config = Config{}
+	SetLogLevel(LevelError)
+
+	t.Cleanup(func() {
+		certsCache = oldCache
+		config = oldConfig
+		currentLogLevel = oldLevel
+	})
+}
+
+// writeTestCertificate generates a self-signed certificate and writes the
+// PEM files to the given directory. It returns the paths and the certificate DER.
+func writeTestCertificate(t *testing.T, dir, commonName string) (certPath, keyPath string, der []byte) {
+	t.Helper()
+
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+
+	template := x509.Certificate{
+		SerialNumber:          big.NewInt(time.Now().UnixNano()),
+		Subject:               pkix.Name{CommonName: commonName},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+
+	der, err = x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		t.Fatalf("failed to create certificate: %v", err)
+	}
+
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+
+	keyBytes, err := x509.MarshalECPrivateKey(priv)
+	if err != nil {
+		t.Fatalf("failed to encode key: %v", err)
+	}
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyBytes})
+
+	certPath = filepath.Join(dir, "cert.pem")
+	keyPath = filepath.Join(dir, "key.pem")
+
+	if err := os.WriteFile(certPath, certPEM, 0644); err != nil {
+		t.Fatalf("failed to write certificate: %v", err)
+	}
+	if err := os.WriteFile(keyPath, keyPEM, 0600); err != nil {
+		t.Fatalf("failed to write key: %v", err)
+	}
+
+	return certPath, keyPath, der
+}
+
+func TestReloadCertificatesClearsCache(t *testing.T) {
+	setupCertTest(t)
+
+	certsCacheMu.Lock()
+	certsCache["example.com"] = tls.Certificate{}
+	certsCacheMu.Unlock()
+
+	ReloadCertificates()
+
+	certsCacheMu.RLock()
+	_, exists := certsCache["example.com"]
+	certsCacheMu.RUnlock()
+
+	if exists {
+		t.Fatal("ReloadCertificates did not clear certificate cache")
+	}
+}
+
+func TestGetCertificateReload(t *testing.T) {
+	setupCertTest(t)
+
+	domain := "example.com"
+	dir := t.TempDir()
+
+	certPath, keyPath, firstDER := writeTestCertificate(t, dir, "first")
+
+	config.Domains = map[string]DomainConfig{
+		domain: {
+			CertFilePath: certPath,
+			KeyFilePath:  keyPath,
+		},
+	}
+
+	info := &tls.ClientHelloInfo{ServerName: domain}
+
+	cert1, err := getCertificate(info)
+	if err != nil {
+		t.Fatalf("first load failed: %v", err)
+	}
+	if !bytes.Equal(cert1.Certificate[0], firstDER) {
+		t.Fatal("first loaded certificate does not match generated one")
+	}
+
+	// Overwrite files with a new certificate.
+	_, _, secondDER := writeTestCertificate(t, dir, "second")
+
+	// Should still come from the cache, therefore remains the old certificate.
+	cert2, err := getCertificate(info)
+	if err != nil {
+		t.Fatalf("second load failed: %v", err)
+	}
+	if !bytes.Equal(cert2.Certificate[0], firstDER) {
+		t.Fatal("certificate was reloaded without calling ReloadCertificates")
+	}
+
+	ReloadCertificates()
+
+	cert3, err := getCertificate(info)
+	if err != nil {
+		t.Fatalf("third load failed: %v", err)
+	}
+	if bytes.Equal(cert3.Certificate[0], firstDER) {
+		t.Fatal("certificate was not updated after ReloadCertificates")
+	}
+	if !bytes.Equal(cert3.Certificate[0], secondDER) {
+		t.Fatal("reloaded certificate does not match the new certificate on disk")
+	}
+}
+
+func TestGetCertificate_CacheHitAfterLock(t *testing.T) {
+	setupCertTest(t)
+
+	domain := "cache-after-lock.example.com"
+	dir := t.TempDir()
+	certPath, keyPath, _ := writeTestCertificate(t, dir, domain)
+
+	config.Domains = map[string]DomainConfig{
+		domain: {
+			CertFilePath: certPath,
+			KeyFilePath:  keyPath,
+		},
+	}
+
+	// Ensure the cache is empty for this domain.
+	certsCacheMu.Lock()
+	delete(certsCache, domain)
+	certsCacheMu.Unlock()
+
+	// Hold the domain lock; this makes the next call to getCertificate
+	// wait in AcquireLock after passing the first cache check.
+	AcquireLock(domain)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		cert, err := getCertificate(&tls.ClientHelloInfo{ServerName: domain})
+		if err != nil {
+			t.Errorf("getCertificate returned error: %v", err)
+			return
+		}
+		if cert == nil {
+			t.Error("getCertificate returned a nil certificate")
+		}
+	}()
+
+	// Small wait to give the goroutine time to pass the first
+	// cache check and block on AcquireLock.
+	time.Sleep(50 * time.Millisecond)
+	runtime.Gosched()
+
+	// Populate the cache while the goroutine is still blocked.
+	certsCacheMu.Lock()
+	certsCache[domain] = tls.Certificate{}
+	certsCacheMu.Unlock()
+
+	// Release the lock so the goroutine can proceed and find the
+	// populated cache in the second check.
+	ReleaseLock(domain)
+
+	<-done
 }
