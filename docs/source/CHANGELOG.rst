@@ -2,6 +2,10 @@ Changelog
 =========
 
 
+* v0.17.0
+
+  - Add path config
+
 * v0.16.0
 
   - Fix config precedence. Config files now have precedence over command
